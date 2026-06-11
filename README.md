@@ -9,11 +9,21 @@ whenever you need more control.
 
 ---
 
-## ⚡ Quick Download
+## ⚡ Quick Links
 
-[![Download APK](https://img.shields.io/badge/Download-Latest%20APK-green?style=for-the-badge&logo=android)](../../releases/latest)
+<p align="center">
+  <a href="../../releases/latest">
+    <img src="https://img.shields.io/badge/Download-Latest%20APK-00E676?style=for-the-badge&logo=android&logoColor=white&labelColor=263238" alt="Download APK" />
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://github.com/PitStop13">
+    <img src="https://img.shields.io/badge/Developer-PitStop13-24292E?style=for-the-badge&logo=github&logoColor=white&labelColor=171515" alt="GitHub Profile" />
+  </a>
+</p>
 
-> 💡 **Just want the app?** Click the button above to download the latest `.apk` file instantly from the Releases page.
+<p align="center">
+  <sub>💡 <b>Just want the app?</b> Click the green button to grab the latest <code>.apk</code> instantly.</sub>
+</p>
 
 ---
 
@@ -38,7 +48,7 @@ Anyone who manages servers from their phone:
 ## 📸 Screenshots
 
 ### 🛠️ Main Overview & Configuration
-| Home | New Server | Edit Task | Settings 1 | Settings 2 |
+| Home | New Server | Edit/New Task | Settings | Settings |
 | :---: | :---: | :---: | :---: | :---: |
 | <img src="Screenshots/home.png" width="160" alt="Home" /> | <img src="Screenshots/newServer.png" width="160" alt="New Server" /> | <img src="Screenshots/editTask.png" width="160" alt="Edit Task" /> | <img src="Screenshots/settings1.png" width="160" alt="Settings 1" /> | <img src="Screenshots/settings2.png" width="160" alt="Settings 2" /> |
 
