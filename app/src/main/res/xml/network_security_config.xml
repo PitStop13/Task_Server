@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Permette connessioni a IP locali e Tailscale (cleartext non usato, SSH è già cifrato) -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">localhost</domain>
+    </domain-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

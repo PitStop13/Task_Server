@@ -1,0 +1,12 @@
+-keep class net.schmizz.** { *; }
+-keep class com.hierynomus.** { *; }
+-keep class org.bouncycastle.** { *; }
+-keep class org.slf4j.** { *; }
+-keepattributes *Annotation*
+-keepattributes Signature
+-dontwarn org.bouncycastle.**
+-dontwarn net.schmizz.**
+-dontwarn com.hierynomus.**
+-dontwarn org.slf4j.**
+-keep class com.taskserver.app.data.model.** { *; }
+-keep class com.taskserver.app.data.ssh.** { *; }

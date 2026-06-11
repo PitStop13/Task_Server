@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108"
+    android:tint="#00E5FF">
+    <!-- Terminal/Server icon -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M34,38h40v4H34zM34,46h30v4H34zM34,54h35v4H34zM34,62h25v4H34z"/>
+    <!-- Prompt cursor -->
+    <path
+        android:fillColor="#7B61FF"
+        android:pathData="M28,38l4,4l-4,4z"/>
+    <path
+        android:fillColor="#7B61FF"
+        android:pathData="M28,54l4,4l-4,4z"/>
+    <!-- Border -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M22,28h64v56H22zM26,32v48h56V32z"
+        android:fillType="evenOdd"/>
+</vector>
