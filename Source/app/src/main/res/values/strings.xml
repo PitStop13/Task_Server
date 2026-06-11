@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TaskServer</string>
+
+    <!-- General -->
+    <string name="back">Back</string>
+    <string name="settings">Settings</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="add">Add</string>
+    <string name="new_text">New</string>
+    <string name="success">Success</string>
+    <string name="error">Error</string>
+    <string name="close">Close</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_servers">Servers</string>
+    <string name="nav_ssh">SSH</string>
+    <string name="nav_tasks">Tasks</string>
+    <string name="nav_logs">Logs</string>
+
+    <!-- Home Screen -->
+    <string name="home_title">TaskServer 🛡️</string>
+    <string name="home_subtitle">SSH CONTROL PANEL</string>
+    <string name="home_server_status">Server Status 🌐</string>
+    <string name="home_show_all">Show all →</string>
+    <string name="home_quick_actions">Quick Actions ⚡</string>
+    <string name="home_recent_logs">Recent Logs 📋</string>
+    <string name="home_all_logs">All logs →</string>
+    <string name="home_new_server">New Server</string>
+    <string name="home_new_task">New Task</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">TaskServer ⚙️</string>
+    <string name="settings_subtitle">Control Panel</string>
+    <string name="settings_appearance">Appearance &amp; Style ✨</string>
+    <string name="settings_dark_mode">App Dark Mode</string>
+    <string name="settings_dark_mode_sub">Activate Dark Mode 2026</string>
+    <string name="settings_security">Security &amp; Privacy 🔒</string>
+    <string name="settings_biometric">Biometric Authentication</string>
+    <string name="settings_biometric_sub">Require fingerprint at app startup</string>
+    <string name="settings_ssh_encryption">SSH Encryption</string>
+    <string name="settings_ssh_encryption_sub">Force X25519 key exchange (High Security)</string>
+    <string name="settings_architecture">System Architecture 🧠</string>
+    <string name="settings_arch_desc">Native engine based on coroutines and SSHJ, designed for continuous secure connections.</string>
+    <string name="settings_version">Version 1.0.0 — Build 2026</string>
+    <string name="settings_designed_by">Designed by Pietro Olivero - PitStop13</string>
+
+    <!-- Servers Screen -->
+    <string name="servers_title">SSH Servers 🖥️</string>
+    <string name="servers_count">%1$d nodes configured</string>
+    <string name="servers_empty">No servers</string>
+    <string name="servers_empty_sub">Add a server to start.</string>
+    <string name="servers_delete_title">Delete server?</string>
+    <string name="servers_delete_msg">This action is irreversible.</string>
+    <string name="servers_deleted">Server deleted</string>
+
+    <!-- Server Edit Screen -->
+    <string name="server_edit_title_edit">Server Configuration</string>
+    <string name="server_edit_title_new">New Server</string>
+    <string name="server_edit_general">GENERAL</string>
+    <string name="server_edit_name">Name</string>
+    <string name="server_edit_network">NETWORK</string>
+    <string name="server_edit_host">IP or Hostname</string>
+    <string name="server_edit_port">Port</string>
+    <string name="server_edit_auth">AUTHENTICATION</string>
+    <string name="server_edit_username">Username</string>
+    <string name="server_edit_password">Password</string>
+    <string name="server_edit_ssh_key">SSH Key</string>
+    <string name="server_edit_ssh_password">SSH Password</string>
+    <string name="server_edit_private_key">RSA/Ed25519 Private Key</string>
+    <string name="server_edit_sudo">SUDO</string>
+    <string name="server_edit_sudo_password">Sudo password (optional)</string>
+    <string name="server_edit_fill_all">Please fill all required fields</string>
+    <string name="server_edit_update">Update Configuration</string>
+    <string name="server_edit_save">Save Server</string>
+
+    <!-- Tasks Screen -->
+    <string name="tasks_title">Task Automations ⚡</string>
+    <string name="tasks_count">%1$d total scripts</string>
+    <string name="tasks_empty">No tasks</string>
+    <string name="tasks_empty_sub">Create a task to execute via SSH.</string>
+    <string name="tasks_run_title">Run Task:</string>
+    <string name="tasks_run_sub">Select which server to run this task on.</string>
+    <string name="tasks_no_servers">No servers available.</string>
+    <string name="tasks_delete_title">Delete task?</string>
+    <string name="tasks_deleted">Task deleted</string>
+
+    <!-- Task Builder Screen -->
+    <string name="task_builder_title_edit">Task Configuration</string>
+    <string name="task_builder_title_new">New Task</string>
+    <string name="task_builder_general">INFORMATION</string>
+    <string name="task_builder_name">Task Name</string>
+    <string name="task_builder_desc">Description (optional)</string>
+    <string name="task_builder_icon">ICON</string>
+    <string name="task_builder_attach">ATTACH TO SERVER</string>
+    <string name="task_builder_ask_always">Always ask</string>
+    <string name="task_builder_sequence">SEQUENCE (%1$d)</string>
+    <string name="task_builder_hide_catalog">Hide catalog</string>
+    <string name="task_builder_browse_catalog">Browse command catalog</string>
+    <string name="task_builder_update">Update Task</string>
+    <string name="task_builder_save">Save Task</string>
+
+    <!-- Logs Screen -->
+    <string name="logs_title">History 📋</string>
+    <string name="logs_count">%1$d records saved</string>
+    <string name="logs_clear_all">Clear history</string>
+    <string name="logs_clear_msg">All execution logs will be permanently deleted. Proceed?</string>
+    <string name="logs_delete_all">Delete All</string>
+    <string name="logs_empty_title">System clean ✨</string>
+    <string name="logs_empty_sub">No operations recorded in the log</string>
+    <string name="logs_detail_empty">Execution empty or interrupted</string>
+
+    <!-- Terminal Screen -->
+    <string name="terminal_manual_ssh">Manual SSH</string>
+    <string name="terminal_remote">Remote Terminal</string>
+    <string name="terminal_running">Execution in progress...</string>
+    <string name="terminal_success">Successfully completed (0)</string>
+    <string name="terminal_error">Error during execution (%1$d)</string>
+    <string name="terminal_failed">Connection failed</string>
+    <string name="terminal_init">Initializing...</string>
+    <string name="terminal_command_placeholder">Command...</string>
+    <string name="terminal_send">Send</string>
+    <string name="terminal_terminate">Terminate (SIGINT)</string>
+    <string name="terminal_run_again">Run again</string>
+    <string name="terminal_go_back">Go back</string>
+
+    <string name="ssh_auth_key">SSH Key Auth</string>
+    <string name="ssh_auth_password">SSH Password Auth</string>
+    <string name="ssh_open">Open SSH</string>
+    <string name="ssh_empty_sub">Add a server to open a manual SSH shell.</string>
+    <string name="ssh_select_sub">Select a server and open an interactive SSH session.</string>
+
+    <!-- Auth -->
+    <string name="auth_required">Authentication Required</string>
+    <string name="auth_unlock">Unlock Application</string>
+</resources>
