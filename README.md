@@ -1,7 +1,7 @@
 # 📱 Task Server
 > **Automate your SSH workflow. Control your servers from anywhere.**
 
-Task Server is an Android app designed for anyone who manages 
+Task Server is an Android app designed by Pietro Olivero for anyone who manages 
 servers and is tired of typing the same commands over and over. 
 Save your servers, define your most-used tasks, and execute 
 them with a single tap — or drop into a full SSH terminal 
@@ -63,4 +63,5 @@ Found a bug? Have a feature idea? Open an [Issue](../../issues) or submit a Pull
 ---
 
 ## 📄 License
-MIT License — free to use, modify and distribute.
+MIT License — Copyright (c) 2026 **Pietro Olivero** (Main Developer & Designer).
+Free to use, modify and distribute.
