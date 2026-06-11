@@ -37,25 +37,15 @@ Anyone who manages servers from their phone:
 
 ## 📸 Screenshots
 
-Di seguito una panoramica completa dell'interfaccia di Task Server, organizzata per sezioni principali. Tutti gli screenshot sono visualizzati in formato ridotto per risparmiare spazio mantenendo una buona leggibilità.
+### 🛠️ Main Overview & Configuration
+| Home | New Server | Edit Task | Settings 1 | Settings 2 |
+| :---: | :---: | :---: | :---: | :---: |
+| <img src="Screenshots/home.png" width="160" alt="Home" /> | <img src="Screenshots/newServer.png" width="160" alt="New Server" /> | <img src="Screenshots/editTask.png" width="160" alt="Edit Task" /> | <img src="Screenshots/settings1.png" width="160" alt="Settings 1" /> | <img src="Screenshots/settings2.png" width="160" alt="Settings 2" /> |
 
-<p align="center">
-  <b>Panoramica Principale & Configurazione</b><br>
-  <img src="Screenshots/home.png" width="18%" alt="Dashboard principale dell'app" />
-  <img src="Screenshots/newServer.png" width="18%" alt="Aggiunta di un nuovo server SSH" />
-  <img src="Screenshots/editTask.png" width="18%" alt="Creazione e modifica dei comandi automatici" />
-  <img src="Screenshots/settings1.jpg" width="18%" alt="Pagina delle impostazioni dell'app (sezione 1)" />
-  <img src="Screenshots/settings2.png" width="18%" alt="Pagina delle impostazioni dell'app (sezione 2)" />
-</p>
-
-<p align="center">
-  <b>Gestione & Connessione SSH</b><br>
-  <img src="Screenshots/server.png" width="18%" alt="Lista dei server salvati" />
-  <img src="Screenshots/task.png" width="18%" alt="Lista dei task configurati" />
-  <img src="Screenshots/sshDashboard.png" width="18%" alt="Dashboard per la selezione della connessione SSH" />
-  <img src="Screenshots/sshTerminal.jpg" width="18%" alt="Terminale SSH interattivo completo" />
-  <img src="Screenshots/log.png" width="18%" alt="Registro delle attività e log" />
-</p>
+### 💻 Connection & Management
+| Servers List | Tasks List | SSH Dashboard | SSH Terminal | Activity Logs |
+| :---: | :---: | :---: | :---: | :---: |
+| <img src="Screenshots/server.png" width="160" alt="Servers" /> | <img src="Screenshots/task.png" width="160" alt="Tasks" /> | <img src="Screenshots/sshDashboard.png" width="160" alt="SSH Dashboard" /> | <img src="Screenshots/sshTerminal.png" width="160" alt="SSH Terminal" /> | <img src="Screenshots/log.png" width="160" alt="Logs" /> |
 
 ---
 
