@@ -11,7 +11,6 @@ import android.webkit.WebViewClient
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
-import kotlinx.coroutines.flow.collectLatest
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -21,12 +20,15 @@ fun XTermWebView(
     onTerminalReady: () -> Unit
 ) {
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    var isReady by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        viewModel.rawOutputFlow.collectLatest { chunk ->
-            val base64 = Base64.encodeToString(chunk, Base64.NO_WRAP)
-            webViewRef?.post {
-                webViewRef?.evaluateJavascript("window.writeBase64ToTerminal('$base64');", null)
+    LaunchedEffect(isReady) {
+        if (isReady) {
+            viewModel.rawOutputFlow.collect { chunk ->
+                val base64 = Base64.encodeToString(chunk, Base64.NO_WRAP)
+                webViewRef?.post {
+                    webViewRef?.evaluateJavascript("window.writeBase64ToTerminal('$base64');", null)
+                }
             }
         }
     }
@@ -65,6 +67,8 @@ fun XTermWebView(
                     @JavascriptInterface
                     fun onTerminalReady(cols: Int, rows: Int) {
                         viewModel.resizeTerminal(cols, rows)
+                        viewModel.setTerminalReady()
+                        isReady = true
                         onTerminalReady()
                     }
                 }, "AndroidBridge")

@@ -1,12 +1,6 @@
--keep class net.schmizz.** { *; }
--keep class com.hierynomus.** { *; }
--keep class org.bouncycastle.** { *; }
--keep class org.slf4j.** { *; }
--keepattributes *Annotation*
--keepattributes Signature
--dontwarn org.bouncycastle.**
--dontwarn net.schmizz.**
--dontwarn com.hierynomus.**
--dontwarn org.slf4j.**
--keep class com.taskserver.app.data.model.** { *; }
--keep class com.taskserver.app.data.ssh.** { *; }
+-keep class net.schmizz.sshj.** { *; }
+-keep class net.i2p.crypto.eddsa.** { *; }
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn sun.security.x509.**
+-dontwarn net.schmizz.sshj.**
+-dontwarn net.i2p.crypto.eddsa.**

@@ -182,8 +182,10 @@ class TerminalViewModel @Inject constructor(
         _uiState.update { it.copy(isRunning = false) }
     }
 
-    private val _rawOutputFlow = MutableSharedFlow<ByteArray>(extraBufferCapacity = 64)
+    private val _rawOutputFlow = MutableSharedFlow<ByteArray>(replay = 50, extraBufferCapacity = 256)
     val rawOutputFlow = _rawOutputFlow.asSharedFlow()
+
+    private var isTerminalReady = false
 
     private fun startInteractiveSession(serverId: Long) {
         viewModelScope.launch {
@@ -216,13 +218,22 @@ class TerminalViewModel @Inject constructor(
 
                 sshJob = launch {
                     interactiveSession?.outputFlow?.collect { chunk ->
-                        _rawOutputFlow.emit(chunk)
+                        if (isTerminalReady) {
+                             _rawOutputFlow.emit(chunk)
+                        } else {
+                             // Buffer internally while JS is loading so we don't drop the motd
+                             _rawOutputFlow.tryEmit(chunk)
+                        }
                     }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.localizedMessage, isRunning = false) }
             }
         }
+    }
+
+    fun setTerminalReady() {
+        isTerminalReady = true
     }
 
     fun resizeTerminal(cols: Int, rows: Int) {
