@@ -182,6 +182,9 @@ class TerminalViewModel @Inject constructor(
         _uiState.update { it.copy(isRunning = false) }
     }
 
+    private val _rawOutputFlow = MutableSharedFlow<ByteArray>(extraBufferCapacity = 64)
+    val rawOutputFlow = _rawOutputFlow.asSharedFlow()
+
     private fun startInteractiveSession(serverId: Long) {
         viewModelScope.launch {
             val server = serverRepository.getServerById(serverId) ?: return@launch
@@ -193,7 +196,7 @@ class TerminalViewModel @Inject constructor(
                     serverName = server.name,
                     serverUsername = server.username,
                     serverHost = server.host,
-                    lines = listOf("$ Connecting to ${server.host}:${server.port}..."),
+                    lines = listOf(),
                     isRunning = true,
                     isInteractive = true,
                     exitCode = null,
@@ -211,13 +214,9 @@ class TerminalViewModel @Inject constructor(
                     credentials.sudoPassword
                 )
 
-                _uiState.update { state ->
-                    state.copy(lines = state.lines + "Connected. Starting interactive shell...")
-                }
-
                 sshJob = launch {
                     interactiveSession?.outputFlow?.collect { chunk ->
-                        handleInteractiveChunk(chunk)
+                        _rawOutputFlow.emit(chunk)
                     }
                 }
             } catch (e: Exception) {
@@ -226,55 +225,34 @@ class TerminalViewModel @Inject constructor(
         }
     }
 
-    private fun handleInteractiveChunk(chunk: String) {
-        val ansiRegex = Regex("\u001B\\[[0-?]*[ -/]*[@-~]")
-        val cleanChunk = chunk.replace(ansiRegex, "").replace("\r", "")
-
-        if (cleanChunk.isEmpty() && chunk.isNotEmpty()) {
-            return
+    fun resizeTerminal(cols: Int, rows: Int) {
+        viewModelScope.launch {
+            interactiveSession?.resize(cols, rows)
         }
+    }
 
-        _uiState.update { state ->
-            val updatedLines = state.lines + cleanChunk
-            val trimmedLines = if (updatedLines.size > 500) updatedLines.takeLast(500) else updatedLines
-            state.copy(lines = trimmedLines)
+    fun sendRawInteractiveBytes(bytes: ByteArray) {
+        viewModelScope.launch {
+            try {
+                interactiveSession?.sendBytes(bytes)
+            } catch (e: Exception) {
+                _uiState.update { state ->
+                    state.copy(error = "Error sending data: ${e.localizedMessage}")
+                }
+            }
         }
     }
 
     fun sendInteractiveCommand(command: String) {
         viewModelScope.launch {
-            val sanitizedCommand = command.trim()
-            if (sanitizedCommand.isBlank()) return@launch
-
-            val session = interactiveSession
-            if (session == null) {
-                _uiState.update { state ->
-                    state.copy(lines = state.lines + "❌ Interactive session not available")
-                }
-                return@launch
-            }
-
-            val prompt = buildInteractivePrompt(_uiState.value)
-            _uiState.update { state ->
-                val updatedLines = state.lines + "$prompt $sanitizedCommand"
-                val trimmedLines = if (updatedLines.size > 500) updatedLines.takeLast(500) else updatedLines
-                state.copy(lines = trimmedLines)
-            }
-
             try {
-                session.sendCommand(sanitizedCommand)
+                interactiveSession?.sendCommand(command)
             } catch (e: Exception) {
                 _uiState.update { state ->
-                    state.copy(lines = state.lines + "❌ ${e.localizedMessage ?: "Error sending command"}")
+                    state.copy(error = "Error sending command: ${e.localizedMessage}")
                 }
             }
         }
-    }
-
-    private fun buildInteractivePrompt(state: TerminalUiState): String {
-        val username = state.serverUsername.ifBlank { "ssh" }
-        val host = state.serverHost.ifBlank { "server" }
-        return "$username@$host:~$"
     }
 
     override fun onCleared() {

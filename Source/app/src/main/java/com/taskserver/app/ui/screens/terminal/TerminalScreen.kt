@@ -21,6 +21,9 @@ import com.taskserver.app.R
 import com.taskserver.app.ui.components.GlowDot
 import com.taskserver.app.ui.components.TerminalOutput
 import com.taskserver.app.ui.theme.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.Color
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,7 +41,7 @@ fun TerminalScreen(
     }
 
     LaunchedEffect(uiState.lines.size) {
-        if (uiState.lines.isNotEmpty()) {
+        if (uiState.lines.isNotEmpty() && !uiState.isInteractive) {
             listState.animateScrollToItem(uiState.lines.size - 1)
         }
     }
@@ -158,57 +161,67 @@ fun TerminalScreen(
             Spacer(Modifier.height(12.dp))
 
             // The actual terminal output block
-            TerminalOutput(
-                lines = uiState.lines,
-                listState = listState,
-                serverHost = uiState.serverHost,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            )
+            if (uiState.isInteractive) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF07080D)) // Deep dark for xterm
+                ) {
+                    XTermWebView(
+                        modifier = Modifier.fillMaxSize(),
+                        viewModel = viewModel,
+                        onTerminalReady = { }
+                    )
+                }
+            } else {
+                TerminalOutput(
+                    lines = uiState.lines,
+                    listState = listState,
+                    serverHost = uiState.serverHost,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                )
+            }
 
             Spacer(Modifier.height(16.dp))
 
             // Control Actions
             if (uiState.isInteractive) {
-                var commandText by remember { mutableStateOf("") }
-                
+                // Interactive Toolbar for SSH
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedTextField(
-                        value = commandText,
-                        onValueChange = { commandText = it },
-                        placeholder = { Text(stringResource(R.string.terminal_command_placeholder), color = TextTertiary) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = CyanPrimary,
-                            unfocusedBorderColor = BorderDefault,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            cursorColor = CyanPrimary
-                        ),
-                        singleLine = true
+                    val toolbarButtons = listOf(
+                        "ESC" to byteArrayOf(0x1B),
+                        "TAB" to byteArrayOf(0x09),
+                        "CTRL" to byteArrayOf(), // Stub for visual, needs advanced implementation for full modifier support
+                        "UP" to byteArrayOf(0x1B, 0x5B, 0x41),
+                        "DOWN" to byteArrayOf(0x1B, 0x5B, 0x42),
+                        "LEFT" to byteArrayOf(0x1B, 0x5B, 0x44),
+                        "RIGHT" to byteArrayOf(0x1B, 0x5B, 0x43),
+                        "CTRL+C" to byteArrayOf(0x03)
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    FilledIconButton(
-                        onClick = { 
-                            if (commandText.isNotBlank()) {
-                                viewModel.sendInteractiveCommand(commandText)
-                                commandText = ""
-                            }
-                        },
-                        modifier = Modifier.size(56.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = CyanPrimary,
-                            contentColor = Void
-                        ),
-                        enabled = uiState.isRunning
-                    ) {
-                        Icon(Icons.Filled.Send, stringResource(R.string.terminal_send))
+
+                    toolbarButtons.forEach { (label, bytes) ->
+                        OutlinedButton(
+                            onClick = {
+                                if (bytes.isNotEmpty()) {
+                                    viewModel.sendRawInteractiveBytes(bytes)
+                                }
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderDefault),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(label, style = MaterialTheme.typography.labelMedium)
+                        }
                     }
                 }
             } else {
