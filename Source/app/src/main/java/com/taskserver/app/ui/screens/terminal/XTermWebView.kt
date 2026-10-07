@@ -68,9 +68,7 @@ fun XTermWebView(
                     fun onTerminalReady(cols: Int, rows: Int) {
                         viewModel.resizeTerminal(cols, rows)
                         viewModel.setTerminalReady()
-                        webViewRef?.post {
-                            isReady = true
-                        }
+                        isReady = true
                         onTerminalReady()
                     }
                 }, "AndroidBridge")

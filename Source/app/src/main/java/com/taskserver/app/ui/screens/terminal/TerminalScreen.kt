@@ -195,57 +195,32 @@ fun TerminalScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
-                        .padding(bottom = 8.dp, top = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Utility Buttons
-                    val textButtons = listOf(
+                    val toolbarButtons = listOf(
                         "ESC" to byteArrayOf(0x1B),
                         "TAB" to byteArrayOf(0x09),
+                        "CTRL" to byteArrayOf(), // Stub for visual, needs advanced implementation for full modifier support
+                        "UP" to byteArrayOf(0x1B, 0x5B, 0x41),
+                        "DOWN" to byteArrayOf(0x1B, 0x5B, 0x42),
+                        "LEFT" to byteArrayOf(0x1B, 0x5B, 0x44),
+                        "RIGHT" to byteArrayOf(0x1B, 0x5B, 0x43),
                         "CTRL+C" to byteArrayOf(0x03)
                     )
 
-                    textButtons.forEach { (label, bytes) ->
+                    toolbarButtons.forEach { (label, bytes) ->
                         OutlinedButton(
-                            onClick = { viewModel.sendRawInteractiveBytes(bytes) },
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = SurfaceContainer,
-                                contentColor = TextPrimary
-                            ),
+                            onClick = {
+                                if (bytes.isNotEmpty()) {
+                                    viewModel.sendRawInteractiveBytes(bytes)
+                                }
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
                             border = androidx.compose.foundation.BorderStroke(1.dp, BorderDefault),
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                            modifier = Modifier.height(44.dp)
+                            shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    // Divider
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(BorderSubtle))
-                    Spacer(modifier = Modifier.width(4.dp))
-
-                    // Arrow Buttons
-                    val arrowButtons = listOf(
-                        Icons.Filled.KeyboardArrowLeft to byteArrayOf(0x1B, 0x5B, 0x44),
-                        Icons.Filled.KeyboardArrowDown to byteArrayOf(0x1B, 0x5B, 0x42),
-                        Icons.Filled.KeyboardArrowUp to byteArrayOf(0x1B, 0x5B, 0x41),
-                        Icons.Filled.KeyboardArrowRight to byteArrayOf(0x1B, 0x5B, 0x43)
-                    )
-
-                    arrowButtons.forEach { (icon, bytes) ->
-                        FilledIconButton(
-                            onClick = { viewModel.sendRawInteractiveBytes(bytes) },
-                            colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = SurfaceHigh,
-                                contentColor = CyanPrimary
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.size(44.dp)
-                        ) {
-                            Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
+                            Text(label, style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
