@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="xterm.css" />
+  <script src="xterm.js"></script>
+  <script src="xterm-addon-fit.js"></script>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: transparent; /* Permette al colore Android di vedersi sotto, oppure possiamo settare il #07080D qui */
+      overflow: hidden; /* Nasconde le barre di scorrimento del browser */
+    }
+    #terminal {
+      width: 100%;
+      height: 100%;
+    }
+    /* Rimuove i background default così possiamo usare quelli dell'app se vogliamo, o tenerli neri */
+    .xterm-viewport {
+       background-color: #07080D !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal"></div>
+  <script>
+    var term = new Terminal({
+      cursorBlink: true,
+      theme: {
+        background: '#07080D',
+        foreground: '#E2E8F0',
+        cursor: '#4D80FF',
+        selectionBackground: 'rgba(77, 128, 255, 0.3)',
+        black: '#1E2338',
+        red: '#FB7185',
+        green: '#2DD4BF',
+        yellow: '#FACC15',
+        blue: '#4D80FF',
+        magenta: '#9333EA',
+        cyan: '#709AFF',
+        white: '#E2E8F0',
+        brightBlack: '#64748B',
+        brightRed: '#FB7185',
+        brightGreen: '#2DD4BF',
+        brightYellow: '#FACC15',
+        brightBlue: '#709AFF',
+        brightMagenta: '#A855F7',
+        brightCyan: '#709AFF',
+        brightWhite: '#FFFFFF'
+      },
+      fontFamily: 'monospace',
+      fontSize: 14
+    });
+
+    const fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+    term.open(document.getElementById('terminal'));
+    fitAddon.fit();
+
+    window.addEventListener('resize', () => {
+      fitAddon.fit();
+      if (window.AndroidBridge && window.AndroidBridge.onResize) {
+         window.AndroidBridge.onResize(term.cols, term.rows);
+      }
+    });
+
+    term.onData(e => {
+       if (window.AndroidBridge && window.AndroidBridge.onData) {
+           window.AndroidBridge.onData(e);
+       }
+    });
+
+    window.writeToTerminal = function(data) {
+       term.write(data);
+    };
+
+    window.writeBase64ToTerminal = function(base64Str) {
+       // Decodifica la stringa Base64 per preservare byte raw come i colori
+       try {
+           const binaryString = atob(base64Str);
+           const bytes = new Uint8Array(binaryString.length);
+           for (let i = 0; i < binaryString.length; i++) {
+               bytes[i] = binaryString.charCodeAt(i);
+           }
+           term.write(bytes);
+       } catch (e) {
+           console.error("Base64 decode error", e);
+       }
+    };
+
+    // Notifica Android che il terminale è pronto
+    setTimeout(() => {
+      fitAddon.fit();
+      if (window.AndroidBridge && window.AndroidBridge.onTerminalReady) {
+         window.AndroidBridge.onTerminalReady(term.cols, term.rows);
+      }
+    }, 100);
+
+  </script>
+</body>
+</html>

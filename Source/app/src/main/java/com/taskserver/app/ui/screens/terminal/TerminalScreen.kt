@@ -21,6 +21,9 @@ import com.taskserver.app.R
 import com.taskserver.app.ui.components.GlowDot
 import com.taskserver.app.ui.components.TerminalOutput
 import com.taskserver.app.ui.theme.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.Color
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,7 +41,7 @@ fun TerminalScreen(
     }
 
     LaunchedEffect(uiState.lines.size) {
-        if (uiState.lines.isNotEmpty()) {
+        if (uiState.lines.isNotEmpty() && !uiState.isInteractive) {
             listState.animateScrollToItem(uiState.lines.size - 1)
         }
     }
@@ -158,57 +161,92 @@ fun TerminalScreen(
             Spacer(Modifier.height(12.dp))
 
             // The actual terminal output block
-            TerminalOutput(
-                lines = uiState.lines,
-                listState = listState,
-                serverHost = uiState.serverHost,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            )
+            if (uiState.isInteractive) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF07080D)) // Deep dark for xterm
+                ) {
+                    XTermWebView(
+                        modifier = Modifier.fillMaxSize(),
+                        viewModel = viewModel,
+                        onTerminalReady = { }
+                    )
+                }
+            } else {
+                TerminalOutput(
+                    lines = uiState.lines,
+                    listState = listState,
+                    serverHost = uiState.serverHost,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                )
+            }
 
             Spacer(Modifier.height(16.dp))
 
             // Control Actions
             if (uiState.isInteractive) {
-                var commandText by remember { mutableStateOf("") }
-                
+                // Interactive Toolbar for SSH
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(bottom = 8.dp, top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedTextField(
-                        value = commandText,
-                        onValueChange = { commandText = it },
-                        placeholder = { Text(stringResource(R.string.terminal_command_placeholder), color = TextTertiary) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = CyanPrimary,
-                            unfocusedBorderColor = BorderDefault,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            cursorColor = CyanPrimary
-                        ),
-                        singleLine = true
+                    // Utility Buttons
+                    val textButtons = listOf(
+                        "ESC" to byteArrayOf(0x1B),
+                        "TAB" to byteArrayOf(0x09),
+                        "CTRL+C" to byteArrayOf(0x03)
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    FilledIconButton(
-                        onClick = { 
-                            if (commandText.isNotBlank()) {
-                                viewModel.sendInteractiveCommand(commandText)
-                                commandText = ""
-                            }
-                        },
-                        modifier = Modifier.size(56.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = CyanPrimary,
-                            contentColor = Void
-                        ),
-                        enabled = uiState.isRunning
-                    ) {
-                        Icon(Icons.Filled.Send, stringResource(R.string.terminal_send))
+
+                    textButtons.forEach { (label, bytes) ->
+                        OutlinedButton(
+                            onClick = { viewModel.sendRawInteractiveBytes(bytes) },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = SurfaceContainer,
+                                contentColor = TextPrimary
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderDefault),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                            modifier = Modifier.height(44.dp)
+                        ) {
+                            Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Divider
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(BorderSubtle))
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    // Arrow Buttons
+                    val arrowButtons = listOf(
+                        Icons.Filled.KeyboardArrowLeft to byteArrayOf(0x1B, 0x5B, 0x44),
+                        Icons.Filled.KeyboardArrowDown to byteArrayOf(0x1B, 0x5B, 0x42),
+                        Icons.Filled.KeyboardArrowUp to byteArrayOf(0x1B, 0x5B, 0x41),
+                        Icons.Filled.KeyboardArrowRight to byteArrayOf(0x1B, 0x5B, 0x43)
+                    )
+
+                    arrowButtons.forEach { (icon, bytes) ->
+                        FilledIconButton(
+                            onClick = { viewModel.sendRawInteractiveBytes(bytes) },
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = SurfaceHigh,
+                                contentColor = CyanPrimary
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
+                        }
                     }
                 }
             } else {

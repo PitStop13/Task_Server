@@ -10,3 +10,7 @@
 -dontwarn org.slf4j.**
 -keep class com.taskserver.app.data.model.** { *; }
 -keep class com.taskserver.app.data.ssh.** { *; }
+-keep class net.i2p.crypto.eddsa.** { *; }
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn sun.security.x509.**
+-dontwarn net.i2p.crypto.eddsa.**
