@@ -3,8 +3,8 @@ package com.taskserver.app.ui.screens.servers
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.taskserver.app.data.model.AuthType
-import com.taskserver.app.data.model.ServerCredentials
 import com.taskserver.app.data.model.Server
+import com.taskserver.app.data.model.ServerCredentials
 import com.taskserver.app.data.model.ServerStatus
 import com.taskserver.app.data.repository.ServerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,48 +25,38 @@ class ServerViewModel @Inject constructor(
     private val repository: ServerRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ServerUiState())
-    val uiState: StateFlow<ServerUiState> = _uiState.asStateFlow()
+    private val _messages = MutableStateFlow<Pair<String?, String?>>(null to null)
 
-    init {
-        observeServers()
-    }
+    val uiState: StateFlow<ServerUiState> = combine(
+        repository.getAllServers(),
+        repository.statusMap,
+        _messages
+    ) { servers, statusMap, (error, successMsg) ->
+        ServerUiState(
+            servers = servers,
+            statusMap = statusMap,
+            error = error,
+            successMessage = successMsg
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = ServerUiState()
+    )
 
-    private fun observeServers() {
-        viewModelScope.launch {
-            repository.getAllServers().collect { list ->
-                _uiState.update { it.copy(servers = list) }
-                checkAllConnectivity(list)
-            }
-        }
-    }
-
-    fun checkAllConnectivity(servers: List<Server> = _uiState.value.servers) {
-        servers.forEach { server ->
-            viewModelScope.launch {
-                _uiState.update { state ->
-                    state.copy(statusMap = state.statusMap + (server.id to ServerStatus.CHECKING))
-                }
-                val online = repository.checkConnectivity(server)
-                _uiState.update { state ->
-                    state.copy(
-                        statusMap = state.statusMap + (server.id to
-                            if (online) ServerStatus.ONLINE else ServerStatus.OFFLINE)
-                    )
-                }
-            }
-        }
+    fun checkAllConnectivity() {
+        repository.refreshAllServerStatuses()
     }
 
     fun deleteServer(server: Server) {
         viewModelScope.launch {
             repository.deleteServer(server)
-            _uiState.update { it.copy(successMessage = "Server \"${server.name}\" deleted") }
+            _messages.update { null to "Server \"${server.name}\" deleted" }
         }
     }
 
     fun clearMessages() {
-        _uiState.update { it.copy(error = null, successMessage = null) }
+        _messages.update { null to null }
     }
 
     // Credenziali per la schermata di edit

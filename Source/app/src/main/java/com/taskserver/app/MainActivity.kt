@@ -37,8 +37,9 @@ class MainActivity : FragmentActivity() {
         
         setContent {
             var isDarkMode by remember { mutableStateOf(settingsManager.isDarkMode()) }
+            var authErrorMessage by remember { mutableStateOf<String?>(null) }
             var isAuthenticated by remember { 
-                mutableStateOf(!settingsManager.isBiometricEnabled()) 
+                mutableStateOf(!settingsManager.isBiometricEnabled() || !biometricHelper.isBiometricAvailable()) 
             }
             
             if (!isAuthenticated) {
@@ -46,7 +47,7 @@ class MainActivity : FragmentActivity() {
                     biometricHelper.showBiometricPrompt(
                         activity = this@MainActivity,
                         onSuccess = { isAuthenticated = true },
-                        onError = { }
+                        onError = { err -> authErrorMessage = err }
                     )
                 }
             }

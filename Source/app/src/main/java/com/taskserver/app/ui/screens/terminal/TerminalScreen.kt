@@ -42,7 +42,7 @@ fun TerminalScreen(
 
     LaunchedEffect(uiState.lines.size) {
         if (uiState.lines.isNotEmpty() && !uiState.isInteractive) {
-            listState.animateScrollToItem(uiState.lines.size - 1)
+            listState.scrollToItem(uiState.lines.size - 1)
         }
     }
 

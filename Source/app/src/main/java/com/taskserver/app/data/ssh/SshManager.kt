@@ -74,23 +74,50 @@ class SshManager @Inject constructor(
 
             emit(SshOutput.Started)
 
-            // Tutti i comandi vengono eseguiti nello stesso processo bash.
-            // Questo è l'unico modo per far persistere 'cd' tra un comando e l'altro.
-            // Ogni comando è separato da '\n' all'interno di bash -c '...',
-            // quindi la working directory e le variabili d'ambiente sono condivise.
-            val fullCommand = buildShellScript(commands.map { transformCommandForSudo(it, sudoPassword) })
+            val transformedCommands = try {
+                commands.map { transformCommandForSudo(it, sudoPassword) }
+            } catch (e: Exception) {
+                emit(SshOutput.Error(e.localizedMessage ?: "Errore sudo"))
+                return@flow
+            }
+
+            val fullCommand = "set -e\n" + transformedCommands.joinToString("\n")
 
             ssh.startSession().use { session ->
                 session.allocateDefaultPTY()
                 val cmd: Session.Command = session.exec(fullCommand)
                 
-                BufferedReader(InputStreamReader(cmd.inputStream)).use { reader ->
-                    var line: String?
-                    while (currentCoroutineContext().isActive) {
-                        line = reader.readLine()
+                val reader = BufferedReader(InputStreamReader(cmd.inputStream))
+                val errReader = BufferedReader(InputStreamReader(cmd.errorStream))
+
+                while (currentCoroutineContext().isActive) {
+                    var readAny = false
+                    if (reader.ready()) {
+                        val line = reader.readLine()
                         if (line != null) {
                             emit(SshOutput.Data(line + "\n"))
-                        } else break
+                            readAny = true
+                        }
+                    }
+                    if (errReader.ready()) {
+                        val line = errReader.readLine()
+                        if (line != null) {
+                            emit(SshOutput.Data(line + "\n"))
+                            readAny = true
+                        }
+                    }
+                    if (!readAny) {
+                        val line = reader.readLine()
+                        if (line != null) {
+                            emit(SshOutput.Data(line + "\n"))
+                        } else {
+                            val errLine = errReader.readLine()
+                            if (errLine != null) {
+                                emit(SshOutput.Data(errLine + "\n"))
+                            } else {
+                                break
+                            }
+                        }
                     }
                 }
 

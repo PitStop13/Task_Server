@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -107,10 +108,10 @@ fun TerminalOutput(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    items(
+                    itemsIndexed(
                         items = lines,
-                        key = { it.hashCode() + System.nanoTime() } // Chiave per performance e stabilità
-                    ) { line ->
+                        key = { index, _ -> index }
+                    ) { _, line ->
                         TerminalLine(line)
                     }
                 }
