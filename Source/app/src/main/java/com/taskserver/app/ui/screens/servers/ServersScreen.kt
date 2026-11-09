@@ -108,8 +108,9 @@ fun ServersScreen(
         topBar = {
             TopAppBar(
                 modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .windowInsetsPadding(WindowInsets.statusBars),
+                    .statusBarsPadding()
+                    .displayCutoutPadding()
+                    .padding(top = 12.dp, start = 8.dp, end = 8.dp),
                 title = {
                     Column {
                         Row(
@@ -117,7 +118,7 @@ fun ServersScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "Server Nodes",
+                                text = "I tuoi Server",
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontWeight = FontWeight.ExtraBold,
                                     letterSpacing = (-0.5).sp

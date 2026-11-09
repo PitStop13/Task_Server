@@ -4,7 +4,6 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -48,23 +47,23 @@ fun HomeScreen(
 
     val onlineCount = uiState.statusMap.count { it.value == ServerStatus.ONLINE }
     val offlineCount = uiState.statusMap.count { it.value == ServerStatus.OFFLINE }
-    val checkingCount = uiState.statusMap.count { it.value == ServerStatus.CHECKING }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .windowInsetsPadding(WindowInsets.statusBars),
+                    .statusBarsPadding()
+                    .displayCutoutPadding()
+                    .padding(top = 12.dp, start = 8.dp, end = 8.dp),
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(42.dp)
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(
                                     Brush.linearGradient(
@@ -77,53 +76,24 @@ fun HomeScreen(
                                 Icons.Filled.Terminal,
                                 contentDescription = null,
                                 tint = Color.White,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                         }
 
                         Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = "TaskServer",
-                                    style = MaterialTheme.typography.titleLarge.copy(
-                                        fontWeight = FontWeight.ExtraBold,
-                                        letterSpacing = (-0.5).sp
-                                    ),
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                                // Active indicator pill
-                                val statusColor = when {
-                                    uiState.servers.isEmpty() -> TextTertiary
-                                    offlineCount > 0 -> ColorError
-                                    checkingCount > 0 -> ColorChecking
-                                    else -> ColorOnline
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(statusColor.copy(alpha = 0.15f))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = if (uiState.servers.isEmpty()) "READY" else "$onlineCount/${uiState.serverCount} UP",
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            fontFamily = MonospaceFontFamily
-                                        ),
-                                        color = statusColor
-                                    )
-                                }
-                            }
                             Text(
-                                text = "SSH & AUTOMATION ENGINE",
+                                text = "TaskServer",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = (-0.5).sp
+                                ),
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Text(
+                                text = "Automazione & Gestione Server",
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 10.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    letterSpacing = 1.2.sp
+                                    letterSpacing = 0.8.sp
                                 ),
                                 color = CyanPrimary
                             )
@@ -160,37 +130,25 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(22.dp)
         ) {
             // ═══════════════════════════════════════════════════════
-            //  HERO / FLEET OVERVIEW CARD
-            // ═══════════════════════════════════════════════════════
-            FleetOverviewHero(
-                serverCount = uiState.serverCount,
-                onlineCount = onlineCount,
-                offlineCount = offlineCount,
-                checkingCount = checkingCount,
-                onAddServer = { navController.navigate("server_edit?serverId=-1") },
-                onNavigateServers = { navController.navigate("servers") }
-            )
-
-            // ═══════════════════════════════════════════════════════
-            //  BENTO STATS GRID
+            //  STATISTICHE RAPIDE
             // ═══════════════════════════════════════════════════════
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 BentoStatCard(
-                    title = "Nodes",
+                    title = "Server",
                     value = "${uiState.serverCount}",
-                    subtext = if (uiState.serverCount > 0) "$onlineCount Online" else "Add server",
+                    subtext = if (uiState.serverCount > 0) "$onlineCount Online" else "Nessun server",
                     icon = Icons.Filled.Dns,
                     glowColor = CyanPrimary,
                     modifier = Modifier.weight(1f),
                     onClick = { navController.navigate("servers") }
                 )
                 BentoStatCard(
-                    title = "Automations",
+                    title = "Automazioni",
                     value = "${uiState.taskCount}",
-                    subtext = "Shell scripts",
+                    subtext = "Task configurati",
                     icon = Icons.Filled.Bolt,
                     glowColor = PurpleSecondary,
                     modifier = Modifier.weight(1f),
@@ -199,11 +157,11 @@ fun HomeScreen(
             }
 
             // ═══════════════════════════════════════════════════════
-            //  QUICK ACTIONS ROW
+            //  AZIONI RAPIDE
             // ═══════════════════════════════════════════════════════
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 ModernSectionHeader(
-                    title = "Quick Actions",
+                    title = "Azioni Rapide",
                     tag = "SHORTCUTS"
                 )
 
@@ -212,28 +170,28 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     QuickActionButton(
-                        title = "New Node",
+                        title = "Nuovo Server",
                         icon = Icons.Filled.Add,
                         accentColor = CyanPrimary,
                         modifier = Modifier.weight(1f),
                         onClick = { navController.navigate("server_edit?serverId=-1") }
                     )
                     QuickActionButton(
-                        title = "New Task",
+                        title = "Nuovo Task",
                         icon = Icons.Filled.Bolt,
                         accentColor = PurpleSecondary,
                         modifier = Modifier.weight(1f),
                         onClick = { navController.navigate("task_builder?taskId=-1") }
                     )
                     QuickActionButton(
-                        title = "SSH Shell",
+                        title = "Terminale",
                         icon = Icons.Filled.Terminal,
                         accentColor = TerminalGreen,
                         modifier = Modifier.weight(1f),
                         onClick = { navController.navigate("ssh") }
                     )
                     QuickActionButton(
-                        title = "New Folder",
+                        title = "Cartella",
                         icon = Icons.Filled.CreateNewFolder,
                         accentColor = Color(0xFFFFB74D),
                         modifier = Modifier.weight(1f),
@@ -243,7 +201,7 @@ fun HomeScreen(
             }
 
             // ═══════════════════════════════════════════════════════
-            //  CONFIGURED SERVERS / LIVE PREVIEW
+            //  I TUOI SERVER
             // ═══════════════════════════════════════════════════════
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
@@ -252,8 +210,8 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     ModernSectionHeader(
-                        title = "Server Nodes",
-                        tag = "${uiState.servers.size} TOTAL"
+                        title = "I tuoi Server",
+                        tag = "${uiState.servers.size} TOTALI"
                     )
                     if (uiState.servers.isNotEmpty()) {
                         TextButton(
@@ -261,7 +219,7 @@ fun HomeScreen(
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                         ) {
                             Text(
-                                "View All",
+                                "Vedi tutti",
                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                 color = CyanPrimary
                             )
@@ -277,7 +235,6 @@ fun HomeScreen(
                 }
 
                 if (uiState.servers.isEmpty()) {
-                    // Empty state onboarding card
                     GlassCard(
                         modifier = Modifier.fillMaxWidth(),
                         glowColor = CyanPrimary,
@@ -306,13 +263,13 @@ fun HomeScreen(
                             }
                             Spacer(Modifier.height(14.dp))
                             Text(
-                                text = "No server nodes yet",
+                                text = "Nessun server configurato",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                             Spacer(Modifier.height(6.dp))
                             Text(
-                                text = "Add your remote Linux servers, Raspberry Pis, or NAS to monitor uptime and run single-tap tasks.",
+                                text = "Aggiungi i tuoi server Linux, Raspberry Pi o NAS per monitorare la raggiungibilità ed eseguire task con un tocco.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -329,13 +286,12 @@ fun HomeScreen(
                             ) {
                                 Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text("Add Server", fontWeight = FontWeight.Bold)
+                                Text("Aggiungi Server", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                 } else {
-                    // Display up to 3 servers with rich cards
-                    uiState.servers.take(3).forEach { server ->
+                    uiState.servers.take(4).forEach { server ->
                         val status = uiState.statusMap[server.id] ?: ServerStatus.UNKNOWN
                         HomeServerNodeCard(
                             serverName = server.name,
@@ -351,7 +307,7 @@ fun HomeScreen(
             }
 
             // ═══════════════════════════════════════════════════════
-            //  RECENT ACTIVITY STREAM
+            //  ATTIVITÀ RECENTE
             // ═══════════════════════════════════════════════════════
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
@@ -360,8 +316,8 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     ModernSectionHeader(
-                        title = "Recent Activity",
-                        tag = "AUDIT"
+                        title = "Attività Recente",
+                        tag = "LOGS"
                     )
                     if (uiState.recentLogs.isNotEmpty()) {
                         TextButton(
@@ -369,7 +325,7 @@ fun HomeScreen(
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                         ) {
                             Text(
-                                "All Logs",
+                                "Tutti i Log",
                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                 color = CyanPrimary
                             )
@@ -399,27 +355,27 @@ fun HomeScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceContainer),
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(PurpleSecondary.copy(alpha = 0.12f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     Icons.Filled.History,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = PurpleSecondary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
                             Spacer(Modifier.width(14.dp))
                             Column {
                                 Text(
-                                    "No executions yet",
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                    text = "Nessuna esecuzione recente",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
                                 Text(
-                                    "Run an automation script to inspect execution logs.",
+                                    text = "I risultati delle esecuzioni appariranno qui",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -427,7 +383,7 @@ fun HomeScreen(
                         }
                     }
                 } else {
-                    uiState.recentLogs.take(3).forEach { log ->
+                    uiState.recentLogs.take(4).forEach { log ->
                         RecentActivityRow(
                             taskName = log.taskName,
                             serverName = log.serverName,
@@ -454,188 +410,8 @@ fun HomeScreen(
 }
 
 // ═══════════════════════════════════════════════════════
-//  SUB-COMPONENTS FOR HOMESCREEN
+//  SUB-COMPONENTS
 // ═══════════════════════════════════════════════════════
-
-@Composable
-private fun FleetOverviewHero(
-    serverCount: Int,
-    onlineCount: Int,
-    offlineCount: Int,
-    checkingCount: Int,
-    onAddServer: () -> Unit,
-    onNavigateServers: () -> Unit
-) {
-    val isDark = LocalThemeIsDark.current
-
-    GlassCard(
-        modifier = Modifier.fillMaxWidth(),
-        glowColor = CyanPrimary,
-        borderAlpha = 0.22f,
-        cornerRadius = 24.dp,
-        onClick = onNavigateServers
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        GlowDot(
-                            color = if (serverCount > 0 && offlineCount == 0) ColorOnline else if (offlineCount > 0) ColorOffline else CyanPrimary,
-                            size = 8.dp,
-                            animate = true
-                        )
-                        Text(
-                            text = "FLEET STATUS",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.2.sp
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = if (serverCount == 0) {
-                            "No Active Nodes"
-                        } else if (offlineCount == 0) {
-                            "All Nodes Operational"
-                        } else {
-                            "$offlineCount Node${if (offlineCount > 1) "s" else ""} Offline"
-                        },
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = (-0.3).sp
-                        ),
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-
-                // Interactive badge pill
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(CyanPrimary.copy(alpha = 0.12f))
-                        .border(1.dp, CyanPrimary.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = "$onlineCount / $serverCount UP",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = MonospaceFontFamily,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = CyanPrimary
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(18.dp))
-
-            // Multi-segment telemetry progress bar
-            val total = if (serverCount == 0) 1f else serverCount.toFloat()
-            val onlineFraction = if (serverCount == 0) 0f else (onlineCount / total)
-            val checkingFraction = if (serverCount == 0) 0f else (checkingCount / total)
-            val offlineFraction = if (serverCount == 0) 0f else (offlineCount / total)
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainer)
-            ) {
-                if (onlineFraction > 0f) {
-                    Box(
-                        modifier = Modifier
-                            .weight(onlineFraction)
-                            .fillMaxHeight()
-                            .background(ColorOnline)
-                    )
-                }
-                if (checkingFraction > 0f) {
-                    Box(
-                        modifier = Modifier
-                            .weight(checkingFraction)
-                            .fillMaxHeight()
-                            .background(ColorChecking)
-                    )
-                }
-                if (offlineFraction > 0f) {
-                    Box(
-                        modifier = Modifier
-                            .weight(offlineFraction)
-                            .fillMaxHeight()
-                            .background(ColorOffline)
-                    )
-                }
-                if (serverCount == 0) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.outlineVariant)
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(14.dp))
-
-            // Metrics row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    FleetMiniStat("Online", onlineCount, ColorOnline)
-                    FleetMiniStat("Offline", offlineCount, ColorOffline)
-                    if (checkingCount > 0) {
-                        FleetMiniStat("Checking", checkingCount, ColorChecking)
-                    }
-                }
-
-                Text(
-                    text = "Tap for nodes →",
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = CyanPrimary
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FleetMiniStat(label: String, count: Int, color: Color) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(6.dp)
-                .clip(CircleShape)
-                .background(color)
-        )
-        Text(
-            text = "$label: $count",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium
-            ),
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
 
 @Composable
 private fun BentoStatCard(

@@ -66,6 +66,7 @@ fun AppNavigation(
     TaskServerTheme(darkTheme = isDarkMode) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
                 if (showBottomBar) {
                     Surface(
@@ -162,7 +163,7 @@ fun AppNavigation(
             NavHost(
                 navController = navController,
                 startDestination = Screen.Home.route,
-                modifier = Modifier.padding(innerPadding),
+                modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
                 enterTransition = { fadeIn(animationSpec = tween(220)) + slideInHorizontally { it / 8 } },
                 exitTransition  = { fadeOut(animationSpec = tween(150)) },
                 popEnterTransition  = { fadeIn(animationSpec = tween(220)) },

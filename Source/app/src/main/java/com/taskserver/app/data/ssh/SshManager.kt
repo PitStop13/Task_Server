@@ -92,20 +92,6 @@ class SshManager @Inject constructor(
                     emit(SshOutput.Data(chunk))
                 }
 
-                // Check for any stderr data that wasn't on PTY
-                val errRead = withContext(Dispatchers.IO) {
-                    try {
-                        if (cmd.errorStream.available() > 0) {
-                            cmd.errorStream.read(buffer)
-                        } else -1
-                    } catch (_: Exception) {
-                        -1
-                    }
-                }
-                if (errRead > 0) {
-                    emit(SshOutput.Data(String(buffer, 0, errRead, Charsets.UTF_8)))
-                }
-
                 cmd.join()
                 emit(SshOutput.Complete(cmd.exitStatus ?: 0))
             }
@@ -132,21 +118,15 @@ class SshManager @Inject constructor(
             if (!sudoPassword.isNullOrBlank()) {
                 val escapedPwd = shellQuote(sudoPassword)
                 append("_SUDO_PWD=$escapedPwd\n")
-                // Crea helper SUDO_ASKPASS temporaneo non interattivo: non richiede terminale, preserva stdin per pipe
-                append("_ASKPASS_TMP=$(mktemp 2>/dev/null || echo \"/tmp/.askpass_\$\$\")\n")
-                append("trap 'rm -f \"\$_ASKPASS_TMP\"' EXIT INT TERM\n")
-                append("cat << 'EOF' > \"\$_ASKPASS_TMP\"\n")
-                append("#!/bin/sh\n")
-                append("printf '%s\\n' \"\$_SUDO_PWD\"\n")
-                append("EOF\n")
-                append("chmod 700 \"\$_ASKPASS_TMP\"\n")
-                append("export SUDO_ASKPASS=\"\$_ASKPASS_TMP\"\n")
                 append("if command -v sudo >/dev/null 2>&1; then\n")
+                append("  printf '%s\\n' \"\$_SUDO_PWD\" | command sudo -S -p '' -v 2>/dev/null || true\n")
                 append("  sudo() {\n")
-                append("    if [ -n \"\$_SUDO_PWD\" ] && [ -x \"\$_ASKPASS_TMP\" ]; then\n")
-                append("      command sudo -A -p '' \"\$@\"\n")
-                append("    elif [ -n \"\$_SUDO_PWD\" ]; then\n")
-                append("      printf '%s\\n' \"\$_SUDO_PWD\" | command sudo -S -p '' \"\$@\"\n")
+                append("    if [ -n \"\$_SUDO_PWD\" ]; then\n")
+                append("      if command sudo -n true 2>/dev/null; then\n")
+                append("        command sudo \"\$@\"\n")
+                append("      else\n")
+                append("        printf '%s\\n' \"\$_SUDO_PWD\" | command sudo -S -p '' \"\$@\"\n")
+                append("      fi\n")
                 append("    else\n")
                 append("      command sudo -n \"\$@\"\n")
                 append("    fi\n")
@@ -162,7 +142,7 @@ class SshManager @Inject constructor(
             }
             commands.forEach { cmd ->
                 val trimmed = cmd.trim()
-                if (trimmed.isNotBlank()) {
+                if (trimmed.isNotBlank() && !trimmed.startsWith("#")) {
                     append(trimmed)
                     append("\n")
                 }

@@ -74,8 +74,9 @@ fun LogsScreen(
         topBar = {
             TopAppBar(
                 modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .windowInsetsPadding(WindowInsets.statusBars),
+                    .statusBarsPadding()
+                    .displayCutoutPadding()
+                    .padding(top = 12.dp, start = 8.dp, end = 8.dp),
                 title = {
                     Column {
                         Row(
