@@ -21,4 +21,13 @@ interface TaskDao {
 
     @Delete
     suspend fun deleteTask(task: Task)
+
+    @Query("UPDATE tasks SET folder = NULL WHERE folder = :folderName")
+    suspend fun clearFolder(folderName: String)
+
+    @Query("UPDATE tasks SET folder = :newFolderName WHERE folder = :oldFolderName")
+    suspend fun updateFolderName(oldFolderName: String, newFolderName: String)
+
+    @Query("UPDATE tasks SET folder = :folderName WHERE id = :taskId")
+    suspend fun updateTaskFolder(taskId: Long, folderName: String?)
 }

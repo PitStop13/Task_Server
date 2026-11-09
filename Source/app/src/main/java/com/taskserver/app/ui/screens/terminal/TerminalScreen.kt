@@ -1,29 +1,33 @@
 package com.taskserver.app.ui.screens.terminal
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.compose.ui.res.stringResource
 import com.taskserver.app.R
 import com.taskserver.app.ui.components.GlowDot
 import com.taskserver.app.ui.components.TerminalOutput
 import com.taskserver.app.ui.theme.*
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.ui.graphics.Color
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,43 +51,53 @@ fun TerminalScreen(
     }
 
     Scaffold(
-        containerColor = Background,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .windowInsetsPadding(WindowInsets.statusBars),
                 title = {
                     Column {
                         Text(
-                            uiState.taskName.ifEmpty {
-                                if (uiState.isInteractive) stringResource(R.string.terminal_manual_ssh) else stringResource(R.string.terminal_remote)
+                            text = uiState.taskName.ifEmpty {
+                                if (uiState.isInteractive) "SSH Console" else "Remote Execution"
                             },
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = TextPrimary
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = (-0.3).sp
+                            ),
+                            color = MaterialTheme.colorScheme.onBackground
                         )
-                        if (uiState.serverName.isNotEmpty()) {
+                        if (uiState.serverName.isNotEmpty() || uiState.serverHost.isNotEmpty()) {
                             Text(
-                                uiState.serverName,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontFamily = MonospaceFontFamily,
-                                color = TextTertiary
-                            )
-                        }
-                        if (uiState.serverHost.isNotEmpty()) {
-                            Text(
-                                if (uiState.serverUsername.isNotEmpty()) {
+                                text = if (uiState.serverUsername.isNotEmpty()) {
                                     "${uiState.serverUsername}@${uiState.serverHost}"
                                 } else {
-                                    uiState.serverHost
+                                    "${uiState.serverName} • ${uiState.serverHost}"
                                 },
-                                style = MaterialTheme.typography.labelSmall,
-                                fontFamily = MonospaceFontFamily,
-                                color = TextTertiary
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontFamily = MonospaceFontFamily,
+                                    fontSize = 11.sp
+                                ),
+                                color = CyanPrimary
                             )
                         }
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Filled.ArrowBack, stringResource(R.string.back), tint = TextPrimary)
+                    IconButton(
+                        onClick = { navController.popBackStack() },
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
                     }
                 },
                 actions = {
@@ -96,7 +110,7 @@ fun TerminalScreen(
                         Spacer(Modifier.width(16.dp))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Background)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         }
     ) { padding ->
@@ -108,54 +122,39 @@ fun TerminalScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             // Execution Status Bar
-            Row(
+            val (statusText, statusColor) = when {
+                uiState.isRunning -> Pair(stringResource(R.string.terminal_running), TerminalAmber)
+                uiState.exitCode == 0 -> Pair(stringResource(R.string.terminal_success), TerminalGreen)
+                uiState.exitCode != null -> Pair(stringResource(R.string.terminal_error, uiState.exitCode!!), TerminalRed)
+                uiState.error != null -> Pair(stringResource(R.string.terminal_failed), TerminalRed)
+                else -> Pair(stringResource(R.string.terminal_init), CyanPrimary)
+            }
+
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SurfaceContainer)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .clip(RoundedCornerShape(14.dp))
+                    .border(1.dp, statusColor.copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
-                Icon(
-                    Icons.Filled.Terminal,
-                    null,
-                    tint = TextTertiary,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(Modifier.width(12.dp))
-                
-                val statusText: String
-                val statusColor: androidx.compose.ui.graphics.Color
-                when {
-                    uiState.isRunning -> {
-                        statusText = stringResource(R.string.terminal_running)
-                        statusColor = TerminalAmber
-                    }
-                    uiState.exitCode == 0 -> {
-                        statusText = stringResource(R.string.terminal_success)
-                        statusColor = TerminalGreen
-                    }
-                    uiState.exitCode != null -> {
-                        statusText = stringResource(R.string.terminal_error, uiState.exitCode!!)
-                        statusColor = TerminalRed
-                    }
-                    uiState.error != null -> {
-                        statusText = stringResource(R.string.terminal_failed)
-                        statusColor = TerminalRed
-                    }
-                    else -> {
-                        statusText = stringResource(R.string.terminal_init)
-                        statusColor = CyanPrimary
-                    }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    GlowDot(color = statusColor, size = 8.dp, animate = uiState.isRunning)
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontFamily = MonospaceFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        ),
+                        color = statusColor
+                    )
                 }
-                
-                Text(
-                    text = statusText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontFamily = MonospaceFontFamily,
-                    color = statusColor,
-                    fontWeight = FontWeight.Bold
-                )
             }
 
             Spacer(Modifier.height(12.dp))
@@ -166,8 +165,9 @@ fun TerminalScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF07080D)) // Deep dark for xterm
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+                        .background(Color(0xFF06080F))
                 ) {
                     XTermWebView(
                         modifier = Modifier.fillMaxSize(),
@@ -186,11 +186,11 @@ fun TerminalScreen(
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(14.dp))
 
             // Control Actions
             if (uiState.isInteractive) {
-                // Interactive Toolbar for SSH
+                // Interactive Toolbar for SSH Mobile Accessory Keys
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -201,32 +201,48 @@ fun TerminalScreen(
                     val toolbarButtons = listOf(
                         "ESC" to byteArrayOf(0x1B),
                         "TAB" to byteArrayOf(0x09),
-                        "CTRL" to byteArrayOf(), // Stub for visual, needs advanced implementation for full modifier support
-                        "UP" to byteArrayOf(0x1B, 0x5B, 0x41),
-                        "DOWN" to byteArrayOf(0x1B, 0x5B, 0x42),
-                        "LEFT" to byteArrayOf(0x1B, 0x5B, 0x44),
-                        "RIGHT" to byteArrayOf(0x1B, 0x5B, 0x43),
-                        "CTRL+C" to byteArrayOf(0x03)
+                        "CTRL+C" to byteArrayOf(0x03),
+                        "▲" to byteArrayOf(0x1B, 0x5B, 0x41),
+                        "▼" to byteArrayOf(0x1B, 0x5B, 0x42),
+                        "◀" to byteArrayOf(0x1B, 0x5B, 0x44),
+                        "▶" to byteArrayOf(0x1B, 0x5B, 0x43),
+                        "CLEAR" to byteArrayOf(0x0C)
                     )
 
                     toolbarButtons.forEach { (label, bytes) ->
-                        OutlinedButton(
-                            onClick = {
-                                if (bytes.isNotEmpty()) {
-                                    viewModel.sendRawInteractiveBytes(bytes)
-                                }
-                            },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderDefault),
-                            shape = RoundedCornerShape(8.dp)
+                        Surface(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
+                                .clickable {
+                                    if (bytes.isNotEmpty()) {
+                                        viewModel.sendRawInteractiveBytes(bytes)
+                                    }
+                                },
+                            color = MaterialTheme.colorScheme.surfaceVariant
                         ) {
-                            Text(label, style = MaterialTheme.typography.labelMedium)
+                            Box(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontFamily = MonospaceFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
                         }
                     }
                 }
             } else {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (uiState.isRunning) {
@@ -236,7 +252,7 @@ fun TerminalScreen(
                                 .weight(1f)
                                 .height(50.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = ColorError.copy(0.15f),
+                                containerColor = ColorError.copy(alpha = 0.15f),
                                 contentColor = ColorError
                             ),
                             shape = RoundedCornerShape(14.dp)
@@ -253,7 +269,7 @@ fun TerminalScreen(
                                 .height(50.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = CyanPrimary,
-                                contentColor = Void
+                                contentColor = OnCyan
                             ),
                             shape = RoundedCornerShape(14.dp)
                         ) {
@@ -261,15 +277,15 @@ fun TerminalScreen(
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.terminal_run_again), fontWeight = FontWeight.Bold)
                         }
-    
+
                         OutlinedButton(
                             onClick = { navController.popBackStack() },
                             modifier = Modifier
                                 .weight(1f)
                                 .height(50.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onBackground),
                             shape = RoundedCornerShape(14.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderDefault)
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                         ) {
                             Text(stringResource(R.string.terminal_go_back), fontWeight = FontWeight.Medium)
                         }

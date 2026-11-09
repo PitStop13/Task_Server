@@ -1,32 +1,38 @@
 package com.taskserver.app.ui.screens.ssh
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.compose.ui.res.stringResource
 import com.taskserver.app.R
 import com.taskserver.app.data.model.AuthType
 import com.taskserver.app.data.model.Server
 import com.taskserver.app.data.model.ServerStatus
-import com.taskserver.app.ui.components.AccentLine
 import com.taskserver.app.ui.components.GlassCard
+import com.taskserver.app.ui.components.GlowDot
 import com.taskserver.app.ui.components.StatusBadge
 import com.taskserver.app.ui.theme.*
 
@@ -40,42 +46,100 @@ fun SshScreen(
     val servers = uiState.servers
     val isChecking = uiState.statusMap.values.any { it == ServerStatus.CHECKING }
 
+    // Rotate animation for Ping icon
+    val infiniteTransition = rememberInfiniteTransition(label = "pingRotate")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "pingRotation"
+    )
+
     Scaffold(
-        containerColor = Background,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                modifier = Modifier.padding(top = 24.dp),
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .windowInsetsPadding(WindowInsets.statusBars),
                 title = {
                     Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "SSH Console",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = (-0.5).sp
+                                ),
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(TerminalGreen.copy(alpha = 0.15f))
+                                    .padding(horizontal = 7.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "xterm.js",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontFamily = MonospaceFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 9.sp
+                                    ),
+                                    color = TerminalGreen
+                                )
+                            }
+                        }
                         Text(
-                            stringResource(R.string.terminal_manual_ssh),
-                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
-                            color = TextPrimary
-                        )
-                        Text(
-                            stringResource(R.string.servers_count, servers.size),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = CyanPrimary
+                            text = "Interactive VT100 / ANSI terminal sessions",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.checkAllConnectivity() }) {
+                    IconButton(
+                        onClick = { viewModel.checkAllConnectivity() },
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                    ) {
                         Icon(
-                            Icons.Filled.NetworkPing,
-                            contentDescription = stringResource(R.string.home_server_status),
-                            tint = if (isChecking) TextTertiary else CyanPrimary
+                            imageVector = Icons.Filled.Refresh,
+                            contentDescription = "Refresh",
+                            modifier = Modifier
+                                .size(20.dp)
+                                .then(if (isChecking) Modifier.rotate(rotation) else Modifier),
+                            tint = if (isChecking) ColorChecking else CyanPrimary
                         )
                     }
-                    IconButton(onClick = { navController.navigate("settings") }) {
+
+                    Spacer(Modifier.width(6.dp))
+
+                    IconButton(
+                        onClick = { navController.navigate("settings") },
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                    ) {
                         Icon(
                             Icons.Filled.Settings,
                             contentDescription = stringResource(R.string.settings),
-                            tint = TextPrimary
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Background)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { padding ->
@@ -83,45 +147,107 @@ fun SshScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding),
+                    .padding(padding)
+                    .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Filled.Terminal, null, modifier = Modifier.size(64.dp), tint = TextTertiary)
-                    Spacer(Modifier.height(16.dp))
-                    Text(stringResource(R.string.servers_empty), style = MaterialTheme.typography.titleMedium, color = TextSecondary)
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        stringResource(R.string.ssh_empty_sub),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextTertiary
-                    )
-                    Spacer(Modifier.height(20.dp))
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(TerminalGreen.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Filled.Terminal,
+                            contentDescription = null,
+                            modifier = Modifier.size(36.dp),
+                            tint = TerminalGreen
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "No Target Servers",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = "Add a server first to start an interactive SSH session with live terminal input.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
                     Button(
                         onClick = { navController.navigate("server_edit?serverId=-1") },
-                        colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary, contentColor = Void),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = CyanPrimary,
+                            contentColor = OnCyan
+                        ),
                         shape = RoundedCornerShape(14.dp)
                     ) {
                         Icon(Icons.Filled.Add, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.home_new_server), fontWeight = FontWeight.Bold)
+                        Text("Add Server", fontWeight = FontWeight.Bold)
                     }
                 }
             }
         } else {
             LazyColumn(
-                contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp, start = 20.dp, end = 20.dp),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 90.dp, start = 20.dp, end = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxSize().padding(padding)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
             ) {
+                // Info banner
                 item {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(
-                            stringResource(R.string.ssh_select_sub),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
-                        )
-                        AccentLine(brush = GradientCyan)
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .border(1.dp, TerminalGreen.copy(alpha = 0.25f), RoundedCornerShape(16.dp)),
+                        color = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(TerminalGreen.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Filled.Code,
+                                    contentDescription = null,
+                                    tint = TerminalGreen,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Ready to Connect",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                                Text(
+                                    text = "Select any server below to open a full interactive shell with ANSI colors & mobile key controls.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -145,110 +271,93 @@ private fun SshServerCard(
     onConnect: () -> Unit
 ) {
     val glowColor = when (status) {
-        ServerStatus.ONLINE -> ColorOnline
-        ServerStatus.OFFLINE -> ColorOffline
+        ServerStatus.ONLINE   -> ColorOnline
+        ServerStatus.OFFLINE  -> ColorOffline
         ServerStatus.CHECKING -> ColorChecking
-        ServerStatus.UNKNOWN -> CyanPrimary
+        ServerStatus.UNKNOWN  -> CyanPrimary
     }
 
     GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onConnect),
+        modifier = Modifier.fillMaxWidth(),
         glowColor = glowColor,
-        borderAlpha = if (status == ServerStatus.ONLINE) 0.3f else 0.15f,
-        cornerRadius = 20.dp
+        borderAlpha = if (status == ServerStatus.ONLINE) 0.30f else 0.15f,
+        cornerRadius = 22.dp,
+        onClick = onConnect
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(SurfaceHigh, RoundedCornerShape(14.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Filled.Dns,
-                        null,
-                        tint = glowColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                Spacer(Modifier.width(16.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = server.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Filled.Person,
-                            null,
-                            tint = TextTertiary,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = server.username,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextTertiary,
-                            fontFamily = MonospaceFontFamily,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = "${server.host}:${server.port}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextTertiary,
-                        fontFamily = MonospaceFontFamily,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                StatusBadge(status = status, showLabel = true, dotSize = 8.dp)
-            }
-
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(13.dp))
+                        .background(glowColor.copy(alpha = 0.12f))
+                        .border(1.dp, glowColor.copy(alpha = 0.25f), RoundedCornerShape(13.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Terminal,
+                        contentDescription = null,
+                        tint = glowColor,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                Spacer(Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = server.name,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "${server.username}@${server.host}:${server.port}",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = MonospaceFontFamily,
+                            fontSize = 11.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                StatusBadge(status = status, showLabel = true, dotSize = 6.dp)
+            }
+
+            // Connection action button
+            Button(
+                onClick = onConnect,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (status == ServerStatus.ONLINE) CyanPrimary else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = if (status == ServerStatus.ONLINE) OnCyan else MaterialTheme.colorScheme.onSurface
+                ),
+                contentPadding = PaddingValues(vertical = 12.dp)
+            ) {
                 Icon(
-                    if (server.authType == AuthType.KEY) Icons.Filled.VpnKey else Icons.Filled.Lock,
-                    null,
-                    tint = TextTertiary,
-                    modifier = Modifier.size(16.dp)
+                    Icons.Filled.Terminal,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = if (server.authType == AuthType.KEY) stringResource(R.string.ssh_auth_key) else stringResource(R.string.ssh_auth_password),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = TextSecondary
+                    text = "Connect to Shell",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
                 )
-                Spacer(Modifier.weight(1f))
-
-                Button(
-                    onClick = onConnect,
-                    colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary, contentColor = Void),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Icon(Icons.Filled.Terminal, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.ssh_open), fontWeight = FontWeight.Bold)
-                }
             }
         }
     }

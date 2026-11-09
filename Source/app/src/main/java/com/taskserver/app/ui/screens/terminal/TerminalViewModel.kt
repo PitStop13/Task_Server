@@ -114,9 +114,8 @@ class TerminalViewModel @Inject constructor(
                         }
                         is SshOutput.Data -> {
                             outputBuffer.append(output.text)
-                            val newLine = output.text.trimEnd('\n')
                             _uiState.update { state ->
-                                state.copy(lines = state.lines + newLine)
+                                state.copy(lines = appendTerminalLines(state.lines, output.text))
                             }
                         }
                         is SshOutput.Error -> {
@@ -140,7 +139,6 @@ class TerminalViewModel @Inject constructor(
                             _uiState.update { state ->
                                 state.copy(
                                     lines = state.lines +
-                                        "" +
                                         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" +
                                         "Completed with exit code: ${output.exitCode}",
                                     isRunning = false,
@@ -269,5 +267,27 @@ class TerminalViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         cancelExecution()
+    }
+
+    private fun appendTerminalLines(currentLines: List<String>, chunk: String): List<String> {
+        if (chunk.isEmpty()) return currentLines
+        val clean = chunk.replace("\r\n", "\n").replace("\r", "")
+        val parts = clean.split("\n")
+        val result = currentLines.toMutableList()
+
+        if (result.isEmpty()) {
+            result.addAll(parts.filter { it.isNotEmpty() })
+            return result
+        }
+
+        val lastIdx = result.size - 1
+        result[lastIdx] = result[lastIdx] + parts[0]
+        for (i in 1 until parts.size) {
+            if (i == parts.size - 1 && parts[i].isEmpty()) {
+                continue
+            }
+            result.add(parts[i])
+        }
+        return result
     }
 }

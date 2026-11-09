@@ -159,6 +159,10 @@ class ServerRepository @Inject constructor(
         }
     }
 
+    suspend fun updateServerFolder(serverId: Long, folderName: String?) {
+        dao.updateServerFolder(serverId, folderName)
+    }
+
     suspend fun deleteServer(server: Server) {
         credentialManager.deleteCredentials(server.id)
         dao.deleteServer(server)

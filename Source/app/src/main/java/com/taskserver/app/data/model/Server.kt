@@ -16,6 +16,7 @@ data class Server(
     val port: Int = 22,
     val username: String,
     val authType: AuthType = AuthType.PASSWORD,
+    val folder: String? = null,
     // Nota: password SSH, chiave privata e password sudo non vengono salvate in Room.
     // Vengono salvate in EncryptedSharedPreferences con chiavi dedicate al server.
     val createdAt: Long = System.currentTimeMillis()

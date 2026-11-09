@@ -25,6 +25,9 @@ class TaskRepository @Inject constructor(
 
     suspend fun deleteTask(task: Task) = dao.deleteTask(task)
 
+    suspend fun updateTaskFolder(taskId: Long, folderName: String?) =
+        dao.updateTaskFolder(taskId, folderName)
+
     fun serializeCommands(commands: List<TaskCommand>): String =
         gson.toJson(commands)
 

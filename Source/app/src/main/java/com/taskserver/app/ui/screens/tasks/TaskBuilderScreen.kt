@@ -11,23 +11,26 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.compose.ui.res.stringResource
 import com.taskserver.app.R
 import com.taskserver.app.data.model.*
 import com.taskserver.app.ui.components.*
 import com.taskserver.app.ui.theme.*
+import kotlinx.coroutines.launch
 
 private val ICON_OPTIONS = listOf(
     "terminal", "docker", "system", "monitor", "folder", "network", "bolt", "restart", "update"
@@ -41,13 +44,18 @@ fun TaskBuilderScreen(
     viewModel: TaskBuilderViewModel = hiltViewModel()
 ) {
     val builderState by viewModel.state.collectAsState()
+    val scope = rememberCoroutineScope()
 
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var iconName by remember { mutableStateOf("terminal") }
     var commands by remember { mutableStateOf(listOf<TaskCommand>()) }
     var pinnedServerId by remember { mutableStateOf<Long?>(null) }
+    var folder by remember { mutableStateOf<String?>(null) }
     var isEditMode by remember { mutableStateOf(false) }
+
+    var showFolderPicker by remember { mutableStateOf(false) }
+    var showCreateFolderDialog by remember { mutableStateOf(false) }
 
     var showPredefined by remember { mutableStateOf(false) }
     var customCommandText by remember { mutableStateOf("") }
@@ -60,6 +68,7 @@ fun TaskBuilderScreen(
                 description = task.description
                 iconName = task.iconName
                 pinnedServerId = task.pinnedServerId
+                folder = task.folder
                 commands = viewModel.deserializeCommands(task.commandsJson)
             }
         }
@@ -70,22 +79,38 @@ fun TaskBuilderScreen(
     }
 
     Scaffold(
-        containerColor = Background,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .windowInsetsPadding(WindowInsets.statusBars),
                 title = {
                     Text(
-                        if (isEditMode) stringResource(R.string.task_builder_title_edit) else stringResource(R.string.task_builder_title_new),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = TextPrimary
+                        text = if (isEditMode) "Configure Automation" else "New Automation",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = (-0.5).sp
+                        ),
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Filled.ArrowBack, stringResource(R.string.back), tint = TextPrimary)
+                    IconButton(
+                        onClick = { navController.popBackStack() },
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Background)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         }
     ) { padding ->
@@ -95,78 +120,168 @@ fun TaskBuilderScreen(
                 .padding(padding)
                 .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Spacer(Modifier.height(8.dp))
+            // ── General ──
+            Text(
+                text = "BASIC INFORMATION",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.2.sp
+                ),
+                color = PurpleSecondary
+            )
 
-            // -- General --
-            Text(stringResource(R.string.task_builder_general), style = MaterialTheme.typography.labelSmall, color = PurpleSecondary, letterSpacing = 2.sp)
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text(stringResource(R.string.task_builder_name)) },
-                leadingIcon = { Icon(Icons.Filled.Bolt, null, modifier = Modifier.size(18.dp)) },
+                label = { Text("Task Name (e.g. Reboot Services)") },
+                leadingIcon = {
+                    Icon(Icons.Filled.Bolt, null, modifier = Modifier.size(18.dp), tint = PurpleSecondary)
+                },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = cyberFieldColors()
+                shape = RoundedCornerShape(14.dp),
+                colors = modernFieldColors(PurpleSecondary)
             )
 
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text(stringResource(R.string.task_builder_desc)) },
+                label = { Text("Description (optional)") },
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 3,
-                shape = RoundedCornerShape(12.dp),
-                colors = cyberFieldColors()
+                shape = RoundedCornerShape(14.dp),
+                colors = modernFieldColors(PurpleSecondary)
             )
 
-            // -- Icon --
-            Spacer(Modifier.height(8.dp))
-            Text(stringResource(R.string.task_builder_icon), style = MaterialTheme.typography.labelSmall, color = PurpleSecondary, letterSpacing = 2.sp)
+            // ── Section: Folder Organization ──
+            Text(
+                text = "FOLDER ORGANIZATION",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.2.sp
+                ),
+                color = PurpleSecondary
+            )
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
+                    .clickable { showFolderPicker = true },
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (folder != null) Icons.Filled.Folder else Icons.Filled.FolderOpen,
+                            contentDescription = null,
+                            tint = PurpleBright,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Column {
+                            Text(
+                                text = "Cartella",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = folder ?: "Nessuna cartella",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                    }
+                    Icon(
+                        Icons.Filled.KeyboardArrowDown,
+                        contentDescription = "Seleziona cartella",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // ── Icon Selection ──
+            Text(
+                text = "SELECT ICON",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.2.sp
+                ),
+                color = PurpleSecondary
+            )
+
             Row(
-                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 ICON_OPTIONS.forEach { ico ->
                     val selected = iconName == ico
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (selected) PurpleSecondary.copy(0.2f) else SurfaceContainer)
-                            .border(1.dp, if (selected) PurpleSecondary else BorderDefault, RoundedCornerShape(12.dp))
+                            .size(50.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                if (selected) PurpleSecondary.copy(alpha = 0.20f)
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .border(
+                                1.5.dp,
+                                if (selected) PurpleSecondary else MaterialTheme.colorScheme.outlineVariant,
+                                RoundedCornerShape(14.dp)
+                            )
                             .clickable { iconName = ico },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = iconFromName(ico),
                             contentDescription = ico,
-                            tint = if (selected) PurpleBright else TextTertiary,
+                            tint = if (selected) PurpleBright else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(24.dp)
                         )
                     }
                 }
             }
 
-            // -- Server associato --
-            Spacer(Modifier.height(8.dp))
-            Text(stringResource(R.string.task_builder_attach), style = MaterialTheme.typography.labelSmall, color = PurpleSecondary, letterSpacing = 2.sp)
+            // ── Target Server Pinning ──
+            Text(
+                text = "TARGET SERVER BINDING",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.2.sp
+                ),
+                color = PurpleSecondary
+            )
+
             Row(
-                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterChip(
                     selected = pinnedServerId == null,
                     onClick = { pinnedServerId = null },
-                    label = { Text(stringResource(R.string.task_builder_ask_always)) },
+                    label = { Text("Prompt each time") },
+                    shape = RoundedCornerShape(12.dp),
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = PurpleSecondary.copy(0.2f),
+                        selectedContainerColor = PurpleSecondary.copy(0.20f),
                         selectedLabelColor = PurpleBright,
-                        containerColor = SurfaceContainer,
-                        labelColor = TextTertiary
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
                 if (builderState.servers.isNotEmpty()) {
@@ -175,124 +290,189 @@ fun TaskBuilderScreen(
                         FilterChip(
                             selected = sel,
                             onClick = { pinnedServerId = if (sel) null else srv.id },
-                            label = { Text("${srv.name}") },
-                            leadingIcon = { if (sel) Icon(Icons.Filled.Check, null, modifier = Modifier.size(16.dp)) },
+                            label = { Text(srv.name) },
+                            shape = RoundedCornerShape(12.dp),
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = PurpleSecondary.copy(0.2f),
-                                selectedLabelColor = PurpleBright,
-                                containerColor = SurfaceContainer,
-                                labelColor = TextTertiary
+                                selectedContainerColor = CyanPrimary.copy(0.20f),
+                                selectedLabelColor = CyanPrimary,
+                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
                     }
                 }
             }
 
-            // -- Comandi --
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(stringResource(R.string.task_builder_sequence, commands.size), style = MaterialTheme.typography.labelSmall, color = CyanPrimary, letterSpacing = 2.sp)
-                AccentLine(brush = GradientCyan)
-            }
-
-            // Aggiungi comando custom
+            // ── Commands Sequence ──
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                OutlinedTextField(
-                    value = customCommandText,
-                    onValueChange = { customCommandText = it },
-                    placeholder = { Text("sudo apt update...") },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f).height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    textStyle = androidx.compose.ui.text.TextStyle(
-                        fontFamily = MonospaceFontFamily,
-                        fontSize = 13.sp,
-                        color = TextPrimary
+                Text(
+                    text = "COMMAND SEQUENCE (${commands.size})",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp
                     ),
-                    colors = cyberFieldColors()
+                    color = PurpleSecondary
                 )
-                FilledIconButton(
-                    onClick = {
-                        if (customCommandText.isNotBlank()) {
-                            commands = commands + TaskCommand(
-                                text = customCommandText.trim(),
-                                order = commands.size,
-                                isCustom = true
-                            )
-                            customCommandText = ""
-                        }
-                    },
-                    modifier = Modifier.size(52.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = CyanPrimary,
-                        contentColor = Void
-                    ),
-                    shape = RoundedCornerShape(12.dp)
+
+                TextButton(
+                    onClick = { showPredefined = !showPredefined }
                 ) {
-                    Icon(Icons.Filled.Add, stringResource(R.string.add), modifier = Modifier.size(24.dp))
+                    Icon(
+                        if (showPredefined) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        null,
+                        modifier = Modifier.size(16.dp),
+                        tint = CyanPrimary
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        if (showPredefined) "Hide Catalog" else "Browse Catalog",
+                        color = CyanPrimary,
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                    )
                 }
             }
 
-            // Preset commands toggle
-            TextButton(onClick = { showPredefined = !showPredefined }) {
-                Icon(
-                    if (showPredefined) Icons.Filled.ExpandLess else Icons.Filled.LocalLibrary,
-                    null, modifier = Modifier.size(18.dp), tint = TextTertiary
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    if (showPredefined) stringResource(R.string.task_builder_hide_catalog) else stringResource(R.string.task_builder_browse_catalog),
-                    color = TextTertiary,
-                    fontWeight = FontWeight.Bold
-                )
+            // Add Custom Command Input Box
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = customCommandText,
+                        onValueChange = { customCommandText = it },
+                        placeholder = { Text("sudo systemctl restart nginx", fontFamily = MonospaceFontFamily, fontSize = 12.sp) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = MonospaceFontFamily),
+                        colors = modernFieldColors(CyanPrimary),
+                        trailingIcon = {
+                            if (customCommandText.isNotBlank()) {
+                                IconButton(
+                                    onClick = {
+                                        commands = commands + TaskCommand(
+                                            text = customCommandText.trim(),
+                                            order = commands.size
+                                        )
+                                        customCommandText = ""
+                                    }
+                                ) {
+                                    Icon(Icons.Filled.Add, contentDescription = "Add", tint = CyanPrimary)
+                                }
+                            }
+                        }
+                    )
+
+                    Button(
+                        onClick = {
+                            if (customCommandText.isNotBlank()) {
+                                commands = commands + TaskCommand(
+                                    text = customCommandText.trim(),
+                                    order = commands.size
+                                )
+                                customCommandText = ""
+                            }
+                        },
+                        enabled = customCommandText.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = CyanPrimary.copy(alpha = 0.15f),
+                            contentColor = CyanPrimary
+                        )
+                    ) {
+                        Icon(Icons.Filled.Terminal, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Add Shell Command", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+                }
             }
 
+            // Predefined Commands Catalog Dropdown Box
             AnimatedVisibility(visible = showPredefined) {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    val categories = PREDEFINED_COMMANDS.groupBy { it.category }
-                    categories.forEach { (cat, cmds) ->
-                        Column {
-                            Text(cat.uppercase(), style = MaterialTheme.typography.labelSmall, color = TextTertiary, modifier = Modifier.padding(bottom = 8.dp))
-                            cmds.forEach { pre ->
-                                Row(
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(1.dp, CyanPrimary.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = "PREDEFINED RECIPES (TAP TO ADD)",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontFamily = MonospaceFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp
+                            ),
+                            color = CyanPrimary
+                        )
+
+                        // Group commands by category
+                        val categories = PREDEFINED_COMMANDS.groupBy { it.category }
+                        categories.forEach { (cat, list) ->
+                            Text(
+                                text = cat.uppercase(),
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                            list.forEach { pre ->
+                                Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(SurfaceVariant)
-                                        .border(1.dp, BorderDefault, RoundedCornerShape(12.dp))
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
                                         .clickable {
                                             commands = commands + TaskCommand(
                                                 text = pre.command,
                                                 order = commands.size,
                                                 isCustom = false
                                             )
-                                            showPredefined = false
-                                        }
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        },
+                                    color = MaterialTheme.colorScheme.surfaceContainer
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(pre.label, style = MaterialTheme.typography.titleSmall, color = TextPrimary)
-                                        Spacer(Modifier.height(4.dp))
-                                        Text(
-                                            pre.command,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontFamily = MonospaceFontFamily,
-                                            color = CyanPrimary,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = pre.label,
+                                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                                color = MaterialTheme.colorScheme.onBackground
+                                            )
+                                            Spacer(Modifier.height(2.dp))
+                                            Text(
+                                                text = pre.command,
+                                                style = MaterialTheme.typography.bodySmall.copy(
+                                                    fontFamily = MonospaceFontFamily,
+                                                    fontSize = 11.sp
+                                                ),
+                                                color = CyanPrimary,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        Icon(
+                                            Icons.Filled.AddCircleOutline,
+                                            contentDescription = "Add command",
+                                            tint = CyanPrimary,
+                                            modifier = Modifier.size(20.dp)
                                         )
                                     }
-                                    Icon(Icons.Filled.AddCircleOutline, null, tint = CyanPrimary, modifier = Modifier.size(20.dp))
                                 }
                             }
                         }
@@ -300,9 +480,9 @@ fun TaskBuilderScreen(
                 }
             }
 
-            // Command List
+            // Command List Items
             commands.forEachIndexed { index, cmd ->
-                CommandItem(
+                CommandItemRow(
                     command = cmd,
                     index = index,
                     onRemove = { commands = commands.toMutableList().also { it.removeAt(index) } },
@@ -331,7 +511,7 @@ fun TaskBuilderScreen(
                 Text(it, color = ColorError, style = MaterialTheme.typography.bodySmall)
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(10.dp))
 
             Button(
                 onClick = {
@@ -341,85 +521,143 @@ fun TaskBuilderScreen(
                         description = description,
                         iconName = iconName,
                         commands = commands,
-                        pinnedServerId = pinnedServerId
+                        pinnedServerId = pinnedServerId,
+                        folder = folder
                     )
                 },
                 enabled = name.isNotBlank() && commands.isNotEmpty() && !builderState.isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(54.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = PurpleSecondary,
-                    contentColor = Void
+                    contentColor = OnPurple
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 if (builderState.isLoading) {
-                    CircularProgressIndicator(Modifier.size(20.dp), color = Void, strokeWidth = 2.dp)
+                    CircularProgressIndicator(Modifier.size(20.dp), color = OnPurple, strokeWidth = 2.dp)
                 } else {
                     Icon(Icons.Filled.Save, null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(if (isEditMode) stringResource(R.string.task_builder_update) else stringResource(R.string.task_builder_save), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        text = if (isEditMode) "Save Automation" else "Create Automation",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
                 }
             }
 
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(30.dp))
         }
+    }
+
+    // Folder Picker Dialog
+    if (showFolderPicker) {
+        MoveToFolderDialog(
+            currentFolder = folder,
+            availableFolders = builderState.folders,
+            onSelectFolder = { selected ->
+                folder = selected
+                showFolderPicker = false
+            },
+            onCreateNewFolder = {
+                showFolderPicker = false
+                showCreateFolderDialog = true
+            },
+            onDismiss = { showFolderPicker = false }
+        )
+    }
+
+    // Create New Folder Dialog
+    if (showCreateFolderDialog) {
+        CreateFolderDialog(
+            title = "Nuova Cartella Task",
+            onDismiss = { showCreateFolderDialog = false },
+            onConfirm = { newFolderName ->
+                scope.launch {
+                    viewModel.createFolder(newFolderName)
+                    folder = newFolderName
+                }
+                showCreateFolderDialog = false
+            }
+        )
     }
 }
 
 @Composable
-private fun CommandItem(
+private fun CommandItemRow(
     command: TaskCommand,
     index: Int,
     onRemove: () -> Unit,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit
 ) {
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Void)
-            .border(1.dp, BorderDefault, RoundedCornerShape(12.dp))
-            .padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clip(RoundedCornerShape(14.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp)),
+        color = MaterialTheme.colorScheme.surfaceVariant
     ) {
-        Box(
-            modifier = Modifier.size(24.dp).background(SurfaceHigh, CircleShape),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("${index + 1}", style = MaterialTheme.typography.labelSmall, color = CyanPrimary, fontWeight = FontWeight.Bold)
-        }
-        Spacer(Modifier.width(12.dp))
-        Text(
-            command.text,
-            fontFamily = MonospaceFontFamily,
-            style = MaterialTheme.typography.bodySmall,
-            color = TextPrimary,
-            modifier = Modifier.weight(1f)
-        )
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            IconButton(onClick = onMoveUp, modifier = Modifier.size(24.dp)) { Icon(Icons.Filled.KeyboardArrowUp, null, tint = TextTertiary, modifier = Modifier.size(16.dp)) }
-            IconButton(onClick = onMoveDown, modifier = Modifier.size(24.dp)) { Icon(Icons.Filled.KeyboardArrowDown, null, tint = TextTertiary, modifier = Modifier.size(16.dp)) }
-        }
-        IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Filled.Close, null, tint = ColorError.copy(0.8f), modifier = Modifier.size(18.dp))
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .clip(CircleShape)
+                    .background(CyanPrimary.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${index + 1}",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontFamily = MonospaceFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp
+                    ),
+                    color = CyanPrimary
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Text(
+                text = command.text,
+                fontFamily = MonospaceFontFamily,
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.weight(1f)
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                IconButton(onClick = onMoveUp, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Filled.KeyboardArrowUp, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                }
+                IconButton(onClick = onMoveDown, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Filled.KeyboardArrowDown, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                }
+                IconButton(onClick = onRemove, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Filled.Close, null, tint = ColorError, modifier = Modifier.size(18.dp))
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun cyberFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = TextPrimary,
-    unfocusedTextColor = TextSecondary,
-    cursorColor = CyanPrimary,
-    focusedBorderColor = CyanPrimary,
-    unfocusedBorderColor = BorderDefault,
-    focusedLabelColor = CyanPrimary,
-    unfocusedLabelColor = TextTertiary,
-    focusedLeadingIconColor = CyanPrimary,
-    unfocusedLeadingIconColor = TextTertiary,
-    focusedContainerColor = SurfaceContainer,
-    unfocusedContainerColor = SurfaceContainer
+private fun modernFieldColors(accentColor: Color) = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = MaterialTheme.colorScheme.onBackground,
+    unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+    focusedBorderColor = accentColor,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+    focusedLabelColor = accentColor,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    cursorColor = accentColor
 )

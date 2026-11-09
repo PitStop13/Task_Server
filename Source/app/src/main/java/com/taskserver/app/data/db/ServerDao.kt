@@ -24,4 +24,13 @@ interface ServerDao {
 
     @Query("SELECT COUNT(*) FROM servers")
     suspend fun getServerCount(): Int
+
+    @Query("UPDATE servers SET folder = NULL WHERE folder = :folderName")
+    suspend fun clearFolder(folderName: String)
+
+    @Query("UPDATE servers SET folder = :newFolderName WHERE folder = :oldFolderName")
+    suspend fun updateFolderName(oldFolderName: String, newFolderName: String)
+
+    @Query("UPDATE servers SET folder = :folderName WHERE id = :serverId")
+    suspend fun updateServerFolder(serverId: Long, folderName: String?)
 }

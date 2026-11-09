@@ -2,9 +2,11 @@ package com.taskserver.app.ui.screens.tasks
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.taskserver.app.data.model.Folder
 import com.taskserver.app.data.model.Server
 import com.taskserver.app.data.model.Task
 import com.taskserver.app.data.model.TaskCommand
+import com.taskserver.app.data.repository.FolderRepository
 import com.taskserver.app.data.repository.ServerRepository
 import com.taskserver.app.data.repository.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,6 +16,7 @@ import javax.inject.Inject
 
 data class TaskBuilderUiState(
     val servers: List<Server> = emptyList(),
+    val folders: List<Folder> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val saved: Boolean = false
@@ -22,7 +25,8 @@ data class TaskBuilderUiState(
 @HiltViewModel
 class TaskBuilderViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
-    private val serverRepository: ServerRepository
+    private val serverRepository: ServerRepository,
+    private val folderRepository: FolderRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TaskBuilderUiState())
@@ -30,8 +34,13 @@ class TaskBuilderViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            serverRepository.getAllServers().collect { servers ->
-                _state.update { it.copy(servers = servers) }
+            combine(
+                serverRepository.getAllServers(),
+                folderRepository.getTaskFolders()
+            ) { servers, folders ->
+                servers to folders
+            }.collect { (servers, folders) ->
+                _state.update { it.copy(servers = servers, folders = folders) }
             }
         }
     }
@@ -44,13 +53,18 @@ class TaskBuilderViewModel @Inject constructor(
         return taskRepository.deserializeCommands(json)
     }
 
+    suspend fun createFolder(name: String): Long {
+        return folderRepository.createFolder(name, "TASK")
+    }
+
     fun save(
         taskId: Long,
         name: String,
         description: String,
         iconName: String,
         commands: List<TaskCommand>,
-        pinnedServerId: Long?
+        pinnedServerId: Long?,
+        folder: String? = null
     ) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
@@ -62,7 +76,8 @@ class TaskBuilderViewModel @Inject constructor(
                     description = description,
                     iconName = iconName,
                     commandsJson = commandsJson,
-                    pinnedServerId = pinnedServerId
+                    pinnedServerId = pinnedServerId,
+                    folder = folder?.takeIf { it.isNotBlank() }
                 )
 
                 if (taskId > 0) {

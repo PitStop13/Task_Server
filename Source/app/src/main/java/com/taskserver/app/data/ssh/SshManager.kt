@@ -1,7 +1,8 @@
-﻿package com.taskserver.app.data.ssh
+package com.taskserver.app.data.ssh
 
 import com.taskserver.app.data.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -9,19 +10,15 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import net.schmizz.sshj.DefaultConfig
 import net.schmizz.sshj.SSHClient
-import net.schmizz.sshj.common.IOUtils
 import net.schmizz.sshj.connection.channel.direct.Session
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.userauth.keyprovider.KeyProvider
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.security.Security
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.currentCoroutineContext
 
 @Singleton
 class SshManager @Inject constructor(
@@ -60,8 +57,8 @@ class SshManager @Inject constructor(
             ssh.addHostKeyVerifier(PromiscuousVerifier())
             ssh.connect(host, port)
             
-            // Timeout per evitare che il thread rimanga appeso
-            ssh.timeout = 10000 
+            // Nessun timeout socket durante l'esecuzione del comando
+            ssh.timeout = 0
             
             if (!privateKeyContent.isNullOrBlank()) {
                 val keyProvider: KeyProvider = ssh.loadKeys(privateKeyContent, null, null)
@@ -74,51 +71,25 @@ class SshManager @Inject constructor(
 
             emit(SshOutput.Started)
 
-            val transformedCommands = try {
-                commands.map { transformCommandForSudo(it, sudoPassword) }
-            } catch (e: Exception) {
-                emit(SshOutput.Error(e.localizedMessage ?: "Errore sudo"))
-                return@flow
-            }
-
-            val fullCommand = "set -e\n" + transformedCommands.joinToString("\n")
+            val fullScript = buildShellScript(commands, sudoPassword)
+            val fullCommand = "sh -c " + shellQuote(fullScript)
 
             ssh.startSession().use { session ->
                 session.allocateDefaultPTY()
                 val cmd: Session.Command = session.exec(fullCommand)
-                
-                val reader = BufferedReader(InputStreamReader(cmd.inputStream))
-                val errReader = BufferedReader(InputStreamReader(cmd.errorStream))
 
+                val buffer = ByteArray(4096)
                 while (currentCoroutineContext().isActive) {
-                    var readAny = false
-                    if (reader.ready()) {
-                        val line = reader.readLine()
-                        if (line != null) {
-                            emit(SshOutput.Data(line + "\n"))
-                            readAny = true
+                    val read = withContext(Dispatchers.IO) {
+                        try {
+                            cmd.inputStream.read(buffer)
+                        } catch (_: Exception) {
+                            -1
                         }
                     }
-                    if (errReader.ready()) {
-                        val line = errReader.readLine()
-                        if (line != null) {
-                            emit(SshOutput.Data(line + "\n"))
-                            readAny = true
-                        }
-                    }
-                    if (!readAny) {
-                        val line = reader.readLine()
-                        if (line != null) {
-                            emit(SshOutput.Data(line + "\n"))
-                        } else {
-                            val errLine = errReader.readLine()
-                            if (errLine != null) {
-                                emit(SshOutput.Data(errLine + "\n"))
-                            } else {
-                                break
-                            }
-                        }
-                    }
+                    if (read <= 0) break
+                    val chunk = String(buffer, 0, read, Charsets.UTF_8)
+                    emit(SshOutput.Data(chunk))
                 }
 
                 cmd.join()
@@ -134,40 +105,45 @@ class SshManager @Inject constructor(
     }.flowOn(Dispatchers.IO)
 
     /**
-     * Costruisce un singolo comando bash che esegue tutti i comandi in sequenza
-     * nello stesso processo shell, mantenendo la working directory e le variabili
-     * d'ambiente tra un comando e l'altro (es. 'cd' persiste).
-     *
-     * Strategia: bash -c 'cmd1\ncmd2\ncmd3'
-     *   - Le single quotes in bash -c delimitano lo script
-     *   - Le single quotes nei comandi vengono escaped come '\''
-     *   - 'set -e' fa terminare lo script al primo errore (comportamento corretto per task)
-     *
-     * Esempio input:  ["cd /home/pit/immich-app", "docker compose pull", "docker compose up -d"]
-     * Esempio output: bash -c 'set -e\ncd /home/pit/immich-app\ndocker compose pull\ndocker compose up -d'
+     * Costruisce uno script di shell robusto che:
+     * - Esegue tutti i comandi in sequenza nello stesso processo shell (mantenendo 'cd' e env vars).
+     * - 'set -e' per interrompere lo script al primo errore e restituire l'exit code corretto.
+     * - Se fornita una sudoPassword, la inietta automaticamente validando il timestamp di sudo
+     *   e definendo una funzione sudo wrapper per gestire sia comandi diretti (es. 'sudo apt update')
+     *   sia comandi concatenati o innestati (es. 'cd /dir && sudo restart', 'echo x | sudo tee y').
      */
-    private fun buildShellScript(commands: List<String>): String {
-        // Unisce i comandi con newline in un unico script
-        val script = buildString {
-            append("set -e\n")         // esce al primo errore, restituisce exit code corretto
+    private fun buildShellScript(commands: List<String>, sudoPassword: String?): String {
+        return buildString {
+            append("set -e\n")
+            if (!sudoPassword.isNullOrBlank()) {
+                val escapedPwd = shellQuote(sudoPassword)
+                append("_SUDO_PWD=$escapedPwd\n")
+                append("if command -v sudo >/dev/null 2>&1; then\n")
+                // Prova ad aggiornare le credenziali sudo subito
+                append("  printf '%s\\n' \"\$_SUDO_PWD\" | sudo -S -p '' -v 2>/dev/null || true\n")
+                // Wrapper per tutti i comandi che invocano sudo
+                append("  sudo() {\n")
+                append("    if [ -n \"\$_SUDO_PWD\" ]; then\n")
+                append("      if printf '%s\\n' \"\$_SUDO_PWD\" | command sudo -S -p '' -v 2>/dev/null; then\n")
+                append("        command sudo \"\$@\"\n")
+                append("      else\n")
+                append("        printf '%s\\n' \"\$_SUDO_PWD\" | command sudo -S -p '' \"\$@\"\n")
+                append("      fi\n")
+                append("    else\n")
+                append("      command sudo \"\$@\"\n")
+                append("    fi\n")
+                append("  }\n")
+                append("fi\n")
+            }
             commands.forEach { cmd ->
-                append(cmd.trim())
-                append("\n")
+                val trimmed = cmd.trim()
+                if (trimmed.isNotBlank()) {
+                    append(trimmed)
+                    append("\n")
+                }
             }
         }
-        // Esegue l'escape delle single quotes per poter usare bash -c '...'
-        // In bash, dentro single quotes non si può avere ' direttamente.
-        // La sequenza corretta è: chiudi le quote ('), scrivi \', riapri le quote (')
-        val escaped = singleQuoteEscape(script)
-        return "bash -c '$escaped'"
     }
-
-    /**
-     * Fa l'escape di una stringa per usarla dentro single quotes in bash.
-     * Ogni ' nella stringa diventa '\''
-     */
-    private fun singleQuoteEscape(s: String): String =
-        s.replace("'", "'\\''")
 
     /**
      * Controlla se il server è raggiungibile via TCP sulla porta SSH.

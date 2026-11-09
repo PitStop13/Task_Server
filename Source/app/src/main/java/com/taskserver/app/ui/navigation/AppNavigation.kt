@@ -1,28 +1,39 @@
-﻿package com.taskserver.app.ui.navigation
+package com.taskserver.app.ui.navigation
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.*
 import androidx.navigation.compose.*
-import androidx.compose.ui.res.stringResource
 import com.taskserver.app.R
 import com.taskserver.app.data.settings.SettingsManager
 import com.taskserver.app.ui.screens.home.HomeScreen
 import com.taskserver.app.ui.screens.logs.LogsScreen
 import com.taskserver.app.ui.screens.servers.ServerEditScreen
 import com.taskserver.app.ui.screens.servers.ServersScreen
-import com.taskserver.app.ui.screens.ssh.SshScreen
 import com.taskserver.app.ui.screens.settings.SettingsScreen
+import com.taskserver.app.ui.screens.ssh.SshScreen
 import com.taskserver.app.ui.screens.tasks.TaskBuilderScreen
 import com.taskserver.app.ui.screens.tasks.TasksScreen
 import com.taskserver.app.ui.screens.terminal.TerminalScreen
@@ -57,52 +68,92 @@ fun AppNavigation(
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
                 if (showBottomBar) {
-                    NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 0.dp
-                    ) {
-                        bottomNavItems.forEach { screen ->
-                            val selected = currentRoute == screen.route
-                            NavigationBarItem(
-                                selected = selected,
-                                onClick = {
-                                    if (currentRoute != screen.route) {
-                                        navController.navigate(screen.route) {
-                                            // Fix: Properly clear stack when returning Home or switching
-                                            popUpTo(navController.graph.startDestinationId) {
-                                                saveState = true
-                                            }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    }
-                                },
-                                icon = {
-                                    Icon(
-                                        imageVector = screen.icon,
-                                        contentDescription = stringResource(screen.labelRes),
-                                        tint = if (selected) {
-                                            if (screen == Screen.Tasks) PurpleSecondary else CyanPrimary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                        }
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                        tonalElevation = 6.dp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(
+                                width = 1.dp,
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                                        Color.Transparent
                                     )
-                                },
-                                label = {
+                                ),
+                                shape = androidx.compose.ui.graphics.RectangleShape
+                            )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .windowInsetsPadding(WindowInsets.navigationBars)
+                                .height(64.dp)
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceAround,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            bottomNavItems.forEach { screen ->
+                                val selected = currentRoute == screen.route
+                                val accentColor = if (screen == Screen.Tasks) PurpleSecondary else CyanPrimary
+                                val scale by animateFloatAsState(
+                                    targetValue = if (selected) 1.08f else 1.0f,
+                                    animationSpec = tween(180),
+                                    label = "iconScale"
+                                )
+
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = ripple(color = accentColor),
+                                            onClick = {
+                                                if (currentRoute != screen.route) {
+                                                    navController.navigate(screen.route) {
+                                                        popUpTo(navController.graph.startDestinationId) {
+                                                            saveState = true
+                                                        }
+                                                        launchSingleTop = true
+                                                        restoreState = true
+                                                    }
+                                                }
+                                            }
+                                        )
+                                        .padding(vertical = 6.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(14.dp))
+                                            .background(
+                                                if (selected) accentColor.copy(alpha = 0.14f) else Color.Transparent
+                                            )
+                                            .padding(horizontal = 14.dp, vertical = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = screen.icon,
+                                            contentDescription = stringResource(screen.labelRes),
+                                            modifier = Modifier
+                                                .size(22.dp)
+                                                .scale(scale),
+                                            tint = if (selected) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
+                                        )
+                                    }
+                                    Spacer(Modifier.height(2.dp))
                                     Text(
                                         text = stringResource(screen.labelRes),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = if (selected) {
-                                            if (screen == Screen.Tasks) PurpleSecondary else CyanPrimary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                        }
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = 10.sp,
+                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                                        ),
+                                        color = if (selected) accentColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
                                     )
-                                },
-                                colors = NavigationBarItemDefaults.colors(
-                                    indicatorColor = (if (screen == Screen.Tasks) PurpleSecondary else CyanPrimary).copy(alpha = 0.1f)
-                                )
-                            )
+                                }
+                            }
                         }
                     }
                 }

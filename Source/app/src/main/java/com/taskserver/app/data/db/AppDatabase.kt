@@ -4,12 +4,13 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.taskserver.app.data.model.ExecutionLog
+import com.taskserver.app.data.model.Folder
 import com.taskserver.app.data.model.Server
 import com.taskserver.app.data.model.Task
 
 @Database(
-    entities = [Server::class, Task::class, ExecutionLog::class],
-    version = 1,
+    entities = [Server::class, Task::class, ExecutionLog::class, Folder::class],
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -17,4 +18,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun serverDao(): ServerDao
     abstract fun taskDao(): TaskDao
     abstract fun logDao(): LogDao
+    abstract fun folderDao(): FolderDao
 }

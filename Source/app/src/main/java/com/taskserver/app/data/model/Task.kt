@@ -12,5 +12,6 @@ data class Task(
     val iconName: String = "terminal",   // nome icona Material
     val commandsJson: String = "[]",     // JSON serializzato di List<TaskCommand>
     val pinnedServerId: Long? = null,    // se null, chiede il server all'esecuzione
+    val folder: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 )

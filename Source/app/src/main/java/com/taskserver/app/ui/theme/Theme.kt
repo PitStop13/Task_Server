@@ -16,12 +16,12 @@ import androidx.core.view.WindowCompat
 // State provider mapped by the whole app
 val LocalThemeIsDark = compositionLocalOf { true }
 
-private val CyberShapes = Shapes(
-    extraSmall = RoundedCornerShape(6.dp),
-    small      = RoundedCornerShape(10.dp),
-    medium     = RoundedCornerShape(14.dp),
-    large      = RoundedCornerShape(18.dp),
-    extraLarge = RoundedCornerShape(24.dp)
+private val ModernShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small      = RoundedCornerShape(12.dp),
+    medium     = RoundedCornerShape(16.dp),
+    large      = RoundedCornerShape(22.dp),
+    extraLarge = RoundedCornerShape(28.dp)
 )
 
 @Composable
@@ -34,14 +34,14 @@ fun TaskServerTheme(
             darkColorScheme(
                 primary              = CyanPrimary,
                 onPrimary            = OnCyan,
-                primaryContainer     = CyanDim,
+                primaryContainer     = Color(0xFF0F2B48),
                 onPrimaryContainer   = CyanBright,
                 secondary            = PurpleSecondary,
                 onSecondary          = OnPurple,
-                secondaryContainer   = PurpleDim,
+                secondaryContainer   = Color(0xFF331D4A),
                 onSecondaryContainer = PurpleBright,
                 tertiary             = TerminalGreen,
-                onTertiary           = Void,
+                onTertiary           = Color.Black,
                 background           = Background,
                 onBackground         = OnBackground,
                 surface              = Surface,
@@ -53,26 +53,26 @@ fun TaskServerTheme(
                 outline              = BorderDefault,
                 outlineVariant       = BorderSubtle,
                 error                = ColorError,
-                onError              = TextPrimary,
+                onError              = Color.White,
                 errorContainer       = Color(0xFF3B1219),
                 onErrorContainer     = ColorError,
                 scrim                = Void.copy(alpha = 0.90f),
-                inverseSurface       = TextPrimary,
-                inverseOnSurface     = Void,
+                inverseSurface       = Color(0xFFF1F5F9),
+                inverseOnSurface     = Color(0xFF090B12),
                 inversePrimary       = CyanDim
             )
         } else {
             lightColorScheme(
                 primary              = CyanPrimary,
                 onPrimary            = OnCyan,
-                primaryContainer     = CyanDim,
-                onPrimaryContainer   = CyanBright,
+                primaryContainer     = Color(0xFFE0F2FE),
+                onPrimaryContainer   = Color(0xFF0369A1),
                 secondary            = PurpleSecondary,
                 onSecondary          = OnPurple,
-                secondaryContainer   = PurpleDim,
-                onSecondaryContainer = PurpleBright,
+                secondaryContainer   = Color(0xFFF3E8FF),
+                onSecondaryContainer = Color(0xFF6B21A8),
                 tertiary             = TerminalGreen,
-                onTertiary           = Void,
+                onTertiary           = Color.White,
                 background           = Background,
                 onBackground         = OnBackground,
                 surface              = Surface,
@@ -84,13 +84,13 @@ fun TaskServerTheme(
                 outline              = BorderDefault,
                 outlineVariant       = BorderSubtle,
                 error                = ColorError,
-                onError              = TextPrimary,
-                errorContainer       = Color(0xFFFFDCDA),
+                onError              = Color.White,
+                errorContainer       = Color(0xFFFFE4E6),
                 onErrorContainer     = ColorError,
-                scrim                = Void.copy(alpha = 0.50f),
-                inverseSurface       = TextPrimary,
-                inverseOnSurface     = Void,
-                inversePrimary       = CyanDim
+                scrim                = Color.Black.copy(alpha = 0.40f),
+                inverseSurface       = Color(0xFF1E293B),
+                inverseOnSurface     = Color.White,
+                inversePrimary       = CyanBright
             )
         }
 
@@ -99,8 +99,8 @@ fun TaskServerTheme(
         if (!view.isInEditMode) {
             SideEffect {
                 val window = (view.context as Activity).window
-                window.statusBarColor = colorScheme.background.toArgb()
-                window.navigationBarColor = colorScheme.surface.toArgb()
+                window.statusBarColor = Color.Transparent.toArgb()
+                window.navigationBarColor = Color.Transparent.toArgb()
                 WindowCompat.getInsetsController(window, view).apply {
                     isAppearanceLightStatusBars = !darkTheme
                     isAppearanceLightNavigationBars = !darkTheme
@@ -111,7 +111,7 @@ fun TaskServerTheme(
         MaterialTheme(
             colorScheme = colorScheme,
             typography  = TaskServerTypography,
-            shapes      = CyberShapes,
+            shapes      = ModernShapes,
             content     = content
         )
     }

@@ -5,17 +5,26 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.fragment.app.FragmentActivity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import com.taskserver.app.R
 import com.taskserver.app.ui.navigation.AppNavigation
+import com.taskserver.app.ui.theme.CyanPrimary
+import com.taskserver.app.ui.theme.OnCyan
 import com.taskserver.app.ui.theme.TaskServerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -69,20 +78,47 @@ class MainActivity : FragmentActivity() {
                             .background(MaterialTheme.colorScheme.background),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Icons.Filled.Shield, 
-                                null, 
-                                modifier = Modifier.size(64.dp), 
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(Modifier.height(24.dp))
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(CircleShape)
+                                    .background(CyanPrimary.copy(alpha = 0.12f))
+                                    .border(1.5.dp, CyanPrimary.copy(alpha = 0.35f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Filled.Fingerprint, 
+                                    contentDescription = null, 
+                                    modifier = Modifier.size(42.dp), 
+                                    tint = CyanPrimary
+                                )
+                            }
+                            
+                            Spacer(Modifier.height(8.dp))
+                            
                             Text(
-                                stringResource(R.string.auth_required),
-                                style = MaterialTheme.typography.titleLarge,
+                                text = "Vault Locked",
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                    letterSpacing = (-0.5).sp
+                                ),
                                 color = MaterialTheme.colorScheme.onBackground
                             )
-                            Spacer(Modifier.height(32.dp))
+                            
+                            Text(
+                                text = "Authenticate with biometric sensor to access saved SSH credentials and servers.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            
+                            Spacer(Modifier.height(16.dp))
+                            
                             Button(
                                 onClick = {
                                     biometricHelper.showBiometricPrompt(
@@ -91,9 +127,21 @@ class MainActivity : FragmentActivity() {
                                         onError = { }
                                     )
                                 },
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = CyanPrimary,
+                                    contentColor = OnCyan
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp)
                             ) {
-                                Text(stringResource(R.string.auth_unlock), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                Icon(Icons.Filled.Shield, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    stringResource(R.string.auth_unlock),
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                )
                             }
                         }
                     }

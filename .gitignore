@@ -1,5 +1,8 @@
 # Built artifacts
 *.apk
+!/app-debug.apk
+/screen_*.png
+/current_*.png
 *.aar
 *.ap_
 *.aab

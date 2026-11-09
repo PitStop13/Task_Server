@@ -33,7 +33,8 @@ Task Server is an Android app designed by **Pietro Olivero** for anyone who mana
 - ⚡ **One-Tap Task Automation** — Define multi-command shell scripts and launch them in a single tap. Preserves working directory changes (`cd`) and supports fail-fast execution (`set -e`).
 - 💻 **Interactive SSH Terminal (xterm.js)** — Full-featured interactive terminal with VT100/ANSI color support, dynamic resizing, and a dedicated mobile accessory keyboard bar (ESC, TAB, arrow navigation, Ctrl+C).
 - 🔐 **Biometric Security & Encrypted Vault** — Secure your credentials with Fingerprint/Face Unlock via AndroidX Biometric. All SSH passwords and private keys are encrypted at rest with Android Keystore & EncryptedSharedPreferences.
-- 🛡️ **Sudo Support** — Seamlessly execute privileged commands with automated sudo password injection.
+- 📁 **Organize with Folders** — Categorize and organize your servers and automated tasks into custom folders with one-tap filtering tabs.
+- 🛡️ **Enhanced Sudo Automation** — Seamlessly execute privileged commands (single, chained, or pipelines) with automated credential validation and zero terminal hangs.
 - 📜 **Audit History & Activity Logs** — Track executed tasks with timestamps, exit codes, and detailed output logs.
 - 📦 **Lightweight & Modern** — Fast Material 3 interface built with Jetpack Compose, featuring native dark and light mode themes.
 
