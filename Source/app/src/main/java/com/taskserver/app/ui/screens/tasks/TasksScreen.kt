@@ -175,25 +175,23 @@ fun TasksScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Folders row
-            if (tasks.isNotEmpty() || folders.isNotEmpty()) {
-                FolderFilterRow(
-                    folders = folders,
-                    selectedFolder = selectedFolder,
-                    onSelectFolder = { selectedFolder = it },
-                    onAddFolderClick = { showCreateFolderDialog = true },
-                    onRenameFolder = { folderToRename = it },
-                    onDeleteFolder = { folderToDelete = it },
-                    itemCountProvider = { f ->
-                        when (f) {
-                            null -> tasks.size
-                            "" -> tasks.count { it.folder.isNullOrBlank() }
-                            else -> tasks.count { it.folder == f }
-                        }
-                    },
-                    accentColor = PurpleBright
-                )
-            }
+            // Folders row - Always visible so user can create, view, and manage folders
+            FolderFilterRow(
+                folders = folders,
+                selectedFolder = selectedFolder,
+                onSelectFolder = { selectedFolder = it },
+                onAddFolderClick = { showCreateFolderDialog = true },
+                onRenameFolder = { folderToRename = it },
+                onDeleteFolder = { folderToDelete = it },
+                itemCountProvider = { f ->
+                    when (f) {
+                        null -> tasks.size
+                        "" -> tasks.count { it.folder.isNullOrBlank() }
+                        else -> tasks.count { it.folder == f }
+                    }
+                },
+                accentColor = PurpleBright
+            )
 
             if (tasks.isEmpty()) {
                 Box(
@@ -234,6 +232,56 @@ fun TasksScreen(
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
                         }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = { navController.navigate("task_builder?taskId=-1") },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = PurpleSecondary,
+                                    contentColor = OnPurple
+                                ),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Create Automation", fontWeight = FontWeight.Bold)
+                            }
+                            OutlinedButton(
+                                onClick = { showCreateFolderDialog = true },
+                                shape = RoundedCornerShape(14.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, PurpleSecondary.copy(alpha = 0.5f))
+                            ) {
+                                Icon(Icons.Filled.CreateNewFolder, contentDescription = null, modifier = Modifier.size(18.dp), tint = PurpleBright)
+                                Spacer(Modifier.width(8.dp))
+                                Text("New Folder", fontWeight = FontWeight.Bold, color = PurpleBright)
+                            }
+                        }
+                    }
+                }
+            } else if (filteredTasks.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = if (!selectedFolder.isNullOrEmpty()) "Nessuna automazione nella cartella \"$selectedFolder\"" else "Nessuna automazione trovata",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "Aggiungi una nuova automazione a questa cartella o cambia filtro.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
                         Button(
                             onClick = { navController.navigate("task_builder?taskId=-1") },
                             colors = ButtonDefaults.buttonColors(
@@ -246,27 +294,6 @@ fun TasksScreen(
                             Spacer(Modifier.width(8.dp))
                             Text("Create Automation", fontWeight = FontWeight.Bold)
                         }
-                    }
-                }
-            } else if (filteredTasks.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "No matching automations",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "No automations found in this folder.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                 }
             } else {

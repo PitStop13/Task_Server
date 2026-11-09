@@ -44,6 +44,7 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isDark = LocalThemeIsDark.current
+    var showCreateFolderDialog by remember { mutableStateOf(false) }
 
     val onlineCount = uiState.statusMap.count { it.value == ServerStatus.ONLINE }
     val offlineCount = uiState.statusMap.count { it.value == ServerStatus.OFFLINE }
@@ -208,7 +209,7 @@ fun HomeScreen(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     QuickActionButton(
                         title = "New Node",
@@ -230,6 +231,13 @@ fun HomeScreen(
                         accentColor = TerminalGreen,
                         modifier = Modifier.weight(1f),
                         onClick = { navController.navigate("ssh") }
+                    )
+                    QuickActionButton(
+                        title = "New Folder",
+                        icon = Icons.Filled.CreateNewFolder,
+                        accentColor = Color(0xFFFFB74D),
+                        modifier = Modifier.weight(1f),
+                        onClick = { showCreateFolderDialog = true }
                     )
                 }
             }
@@ -432,6 +440,16 @@ fun HomeScreen(
 
             Spacer(Modifier.height(16.dp))
         }
+    }
+
+    if (showCreateFolderDialog) {
+        CreateFolderDialog(
+            onDismiss = { showCreateFolderDialog = false },
+            onConfirm = { name ->
+                viewModel.createFolder(name)
+                showCreateFolderDialog = false
+            }
+        )
     }
 }
 

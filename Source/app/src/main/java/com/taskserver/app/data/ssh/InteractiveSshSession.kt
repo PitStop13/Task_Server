@@ -52,7 +52,8 @@ class InteractiveSshSessionImpl(
     override suspend fun sendCommand(command: String) {
         withContext(Dispatchers.IO) {
             val transformed = commandTransformer(command)
-            val cmdFull = if (transformed.endsWith("\r") || transformed.endsWith("\n")) transformed else "$transformed\r"
+            val clean = transformed.trimEnd('\r', '\n')
+            val cmdFull = "$clean\r"
             outputStream.write(cmdFull.toByteArray(Charsets.UTF_8))
             outputStream.flush()
         }

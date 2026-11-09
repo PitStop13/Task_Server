@@ -29,10 +29,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.taskserver.app.R
 import com.taskserver.app.data.model.AuthType
+import com.taskserver.app.data.model.Folder
 import com.taskserver.app.data.model.Server
 import com.taskserver.app.data.model.ServerStatus
+import com.taskserver.app.ui.components.CreateFolderDialog
+import com.taskserver.app.ui.components.DeleteFolderDialog
+import com.taskserver.app.ui.components.FolderFilterRow
 import com.taskserver.app.ui.components.GlassCard
 import com.taskserver.app.ui.components.GlowDot
+import com.taskserver.app.ui.components.RenameFolderDialog
 import com.taskserver.app.ui.components.StatusBadge
 import com.taskserver.app.ui.theme.*
 
@@ -45,6 +50,20 @@ fun SshScreen(
     val uiState by viewModel.uiState.collectAsState()
     val servers = uiState.servers
     val isChecking = uiState.statusMap.values.any { it == ServerStatus.CHECKING }
+
+    val folders = uiState.folders
+    var selectedFolder by remember { mutableStateOf<String?>(null) }
+    var showCreateFolderDialog by remember { mutableStateOf(false) }
+    var folderToRename by remember { mutableStateOf<Folder?>(null) }
+    var folderToDelete by remember { mutableStateOf<Folder?>(null) }
+
+    val filteredServers = remember(servers, selectedFolder) {
+        when (selectedFolder) {
+            null -> servers
+            "" -> servers.filter { it.folder.isNullOrBlank() }
+            else -> servers.filter { it.folder == selectedFolder }
+        }
+    }
 
     // Rotate animation for Ping icon
     val infiniteTransition = rememberInfiniteTransition(label = "pingRotate")
@@ -104,6 +123,24 @@ fun SshScreen(
                     }
                 },
                 actions = {
+                    // Button to add folder
+                    IconButton(
+                        onClick = { showCreateFolderDialog = true },
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.CreateNewFolder,
+                            contentDescription = "Nuova cartella",
+                            modifier = Modifier.size(20.dp),
+                            tint = TerminalGreen
+                        )
+                    }
+
+                    Spacer(Modifier.width(6.dp))
+
                     IconButton(
                         onClick = { viewModel.checkAllConnectivity() },
                         modifier = Modifier
@@ -143,124 +180,221 @@ fun SshScreen(
             )
         }
     ) { padding ->
-        if (servers.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            // Folders Row - Always visible for filtering and managing folders in SSH Console
+            FolderFilterRow(
+                folders = folders,
+                selectedFolder = selectedFolder,
+                onSelectFolder = { selectedFolder = it },
+                onAddFolderClick = { showCreateFolderDialog = true },
+                onRenameFolder = { folderToRename = it },
+                onDeleteFolder = { folderToDelete = it },
+                itemCountProvider = { f ->
+                    when (f) {
+                        null -> servers.size
+                        "" -> servers.count { it.folder.isNullOrBlank() }
+                        else -> servers.count { it.folder == f }
+                    }
+                },
+                accentColor = TerminalGreen
+            )
+
+            if (servers.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(CircleShape)
-                            .background(TerminalGreen.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Icon(
-                            Icons.Filled.Terminal,
-                            contentDescription = null,
-                            modifier = Modifier.size(36.dp),
-                            tint = TerminalGreen
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "No Target Servers",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = "Add a server first to start an interactive SSH session with live terminal input.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-                    }
-                    Button(
-                        onClick = { navController.navigate("server_edit?serverId=-1") },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = CyanPrimary,
-                            contentColor = OnCyan
-                        ),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Icon(Icons.Filled.Add, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Add Server", fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(top = 16.dp, bottom = 90.dp, start = 20.dp, end = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
-                // Info banner
-                item {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .border(1.dp, TerminalGreen.copy(alpha = 0.25f), RoundedCornerShape(16.dp)),
-                        color = MaterialTheme.colorScheme.surfaceVariant
-                    ) {
-                        Row(
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
+                                .size(72.dp)
+                                .clip(CircleShape)
+                                .background(TerminalGreen.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Filled.Terminal,
+                                contentDescription = null,
+                                modifier = Modifier.size(36.dp),
+                                tint = TerminalGreen
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "No Target Servers",
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = "Add a server first to start an interactive SSH session with live terminal input.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(TerminalGreen.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
+                            Button(
+                                onClick = { navController.navigate("server_edit?serverId=-1") },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = CyanPrimary,
+                                    contentColor = OnCyan
+                                ),
+                                shape = RoundedCornerShape(14.dp)
                             ) {
-                                Icon(
-                                    Icons.Filled.Code,
-                                    contentDescription = null,
-                                    tint = TerminalGreen,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                                Icon(Icons.Filled.Add, null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Add Server", fontWeight = FontWeight.Bold)
                             }
-                            Spacer(Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = "Ready to Connect",
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                                Text(
-                                    text = "Select any server below to open a full interactive shell with ANSI colors & mobile key controls.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            OutlinedButton(
+                                onClick = { showCreateFolderDialog = true },
+                                shape = RoundedCornerShape(14.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, TerminalGreen.copy(alpha = 0.5f))
+                            ) {
+                                Icon(Icons.Filled.CreateNewFolder, null, modifier = Modifier.size(18.dp), tint = TerminalGreen)
+                                Spacer(Modifier.width(8.dp))
+                                Text("New Folder", fontWeight = FontWeight.Bold, color = TerminalGreen)
                             }
                         }
                     }
                 }
+            } else if (filteredServers.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = if (!selectedFolder.isNullOrEmpty()) "Nessun server nella cartella \"$selectedFolder\"" else "Nessun server trovato",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "Aggiungi un server a questa cartella o cambia cartella selezionata.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 90.dp, start = 20.dp, end = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Info banner
+                    item {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .border(1.dp, TerminalGreen.copy(alpha = 0.25f), RoundedCornerShape(16.dp)),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(TerminalGreen.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Filled.Code,
+                                        contentDescription = null,
+                                        tint = TerminalGreen,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Ready to Connect",
+                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onBackground
+                                    )
+                                    Text(
+                                        text = "Select any server below to open a full interactive shell with ANSI colors & mobile key controls.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
 
-                items(servers, key = { it.id }) { server ->
-                    val status = uiState.statusMap[server.id] ?: ServerStatus.UNKNOWN
-                    SshServerCard(
-                        server = server,
-                        status = status,
-                        onConnect = { navController.navigate("terminal/-1/${server.id}") }
-                    )
+                    items(filteredServers, key = { it.id }) { server ->
+                        val status = uiState.statusMap[server.id] ?: ServerStatus.UNKNOWN
+                        SshServerCard(
+                            server = server,
+                            status = status,
+                            onConnect = { navController.navigate("terminal/-1/${server.id}") }
+                        )
+                    }
                 }
             }
         }
+    }
+
+    if (showCreateFolderDialog) {
+        CreateFolderDialog(
+            onDismiss = { showCreateFolderDialog = false },
+            onConfirm = { name ->
+                viewModel.createFolder(name)
+                showCreateFolderDialog = false
+            }
+        )
+    }
+
+    folderToRename?.let { folder ->
+        RenameFolderDialog(
+            folder = folder,
+            onDismiss = { folderToRename = null },
+            onConfirm = { newName ->
+                viewModel.renameFolder(folder, newName)
+                if (selectedFolder == folder.name) {
+                    selectedFolder = newName
+                }
+                folderToRename = null
+            }
+        )
+    }
+
+    folderToDelete?.let { folder ->
+        DeleteFolderDialog(
+            folder = folder,
+            onDismiss = { folderToDelete = null },
+            onConfirm = {
+                viewModel.deleteFolder(folder)
+                if (selectedFolder == folder.name) {
+                    selectedFolder = null
+                }
+                folderToDelete = null
+            }
+        )
     }
 }
 

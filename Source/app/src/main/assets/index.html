@@ -73,6 +73,14 @@
        }
     });
 
+    // Assicura che toccare il terminale riporti sempre il focus su xterm
+    document.addEventListener('click', () => {
+       term.focus();
+    });
+    document.addEventListener('touchend', () => {
+       term.focus();
+    });
+
     window.writeToTerminal = function(data) {
        term.write(data);
     };

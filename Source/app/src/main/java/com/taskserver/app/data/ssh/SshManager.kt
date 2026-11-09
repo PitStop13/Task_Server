@@ -92,6 +92,20 @@ class SshManager @Inject constructor(
                     emit(SshOutput.Data(chunk))
                 }
 
+                // Check for any stderr data that wasn't on PTY
+                val errRead = withContext(Dispatchers.IO) {
+                    try {
+                        if (cmd.errorStream.available() > 0) {
+                            cmd.errorStream.read(buffer)
+                        } else -1
+                    } catch (_: Exception) {
+                        -1
+                    }
+                }
+                if (errRead > 0) {
+                    emit(SshOutput.Data(String(buffer, 0, errRead, Charsets.UTF_8)))
+                }
+
                 cmd.join()
                 emit(SshOutput.Complete(cmd.exitStatus ?: 0))
             }
@@ -118,20 +132,31 @@ class SshManager @Inject constructor(
             if (!sudoPassword.isNullOrBlank()) {
                 val escapedPwd = shellQuote(sudoPassword)
                 append("_SUDO_PWD=$escapedPwd\n")
+                // Crea helper SUDO_ASKPASS temporaneo non interattivo: non richiede terminale, preserva stdin per pipe
+                append("_ASKPASS_TMP=$(mktemp 2>/dev/null || echo \"/tmp/.askpass_\$\$\")\n")
+                append("trap 'rm -f \"\$_ASKPASS_TMP\"' EXIT INT TERM\n")
+                append("cat << 'EOF' > \"\$_ASKPASS_TMP\"\n")
+                append("#!/bin/sh\n")
+                append("printf '%s\\n' \"\$_SUDO_PWD\"\n")
+                append("EOF\n")
+                append("chmod 700 \"\$_ASKPASS_TMP\"\n")
+                append("export SUDO_ASKPASS=\"\$_ASKPASS_TMP\"\n")
                 append("if command -v sudo >/dev/null 2>&1; then\n")
-                // Prova ad aggiornare le credenziali sudo subito
-                append("  printf '%s\\n' \"\$_SUDO_PWD\" | sudo -S -p '' -v 2>/dev/null || true\n")
-                // Wrapper per tutti i comandi che invocano sudo
                 append("  sudo() {\n")
-                append("    if [ -n \"\$_SUDO_PWD\" ]; then\n")
-                append("      if printf '%s\\n' \"\$_SUDO_PWD\" | command sudo -S -p '' -v 2>/dev/null; then\n")
-                append("        command sudo \"\$@\"\n")
-                append("      else\n")
-                append("        printf '%s\\n' \"\$_SUDO_PWD\" | command sudo -S -p '' \"\$@\"\n")
-                append("      fi\n")
+                append("    if [ -n \"\$_SUDO_PWD\" ] && [ -x \"\$_ASKPASS_TMP\" ]; then\n")
+                append("      command sudo -A -p '' \"\$@\"\n")
+                append("    elif [ -n \"\$_SUDO_PWD\" ]; then\n")
+                append("      printf '%s\\n' \"\$_SUDO_PWD\" | command sudo -S -p '' \"\$@\"\n")
                 append("    else\n")
-                append("      command sudo \"\$@\"\n")
+                append("      command sudo -n \"\$@\"\n")
                 append("    fi\n")
+                append("  }\n")
+                append("fi\n")
+            } else {
+                // Nessuna password sudo configurata: usa -n (non-interactive) per evitare blocchi infiniti su tty
+                append("if command -v sudo >/dev/null 2>&1; then\n")
+                append("  sudo() {\n")
+                append("    command sudo -n \"\$@\"\n")
                 append("  }\n")
                 append("fi\n")
             }
@@ -191,11 +216,13 @@ class SshManager @Inject constructor(
         session.allocateDefaultPTY()
         val shell = session.startShell()
 
+        val effectiveSudo = sudoPassword?.takeIf { it.isNotBlank() } ?: password
+
         return@withContext InteractiveSshSessionImpl(
             sshClient = ssh,
             session = session,
             shell = shell,
-            commandTransformer = { command -> transformCommandForSudo(command, sudoPassword, requirePassword = false) }
+            commandTransformer = { command -> transformCommandForSudo(command, effectiveSudo, requirePassword = false) }
         )
     }
 }

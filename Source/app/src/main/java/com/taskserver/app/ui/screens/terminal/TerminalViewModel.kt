@@ -66,6 +66,7 @@ class TerminalViewModel @Inject constructor(
             }
 
             val credentials = serverRepository.getCredential(server)
+            val effectiveSudoPassword = credentials.sudoPassword?.takeIf { it.isNotBlank() } ?: credentials.sshPassword
 
             _uiState.update {
                 it.copy(
@@ -102,7 +103,7 @@ class TerminalViewModel @Inject constructor(
                     password = credentials.sshPassword,
                     privateKeyContent = credentials.privateKey,
                     commands = commands.map { it.text },
-                    sudoPassword = credentials.sudoPassword
+                    sudoPassword = effectiveSudoPassword
                 ).collect { output ->
                     when (output) {
                         is SshOutput.Started -> {
@@ -189,6 +190,7 @@ class TerminalViewModel @Inject constructor(
         viewModelScope.launch {
             val server = serverRepository.getServerById(serverId) ?: return@launch
             val credentials = serverRepository.getCredential(server)
+            val effectiveSudoPassword = credentials.sudoPassword?.takeIf { it.isNotBlank() } ?: credentials.sshPassword
 
             _uiState.update {
                 it.copy(
@@ -211,7 +213,7 @@ class TerminalViewModel @Inject constructor(
                     server.username,
                     credentials.sshPassword,
                     credentials.privateKey,
-                    credentials.sudoPassword
+                    sudoPassword = effectiveSudoPassword
                 )
 
                 sshJob = launch {

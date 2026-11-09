@@ -223,12 +223,30 @@ fun ServersScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            // Folders Row - Always visible so user can create, view, and manage folders
+            FolderFilterRow(
+                folders = folders,
+                selectedFolder = selectedFolder,
+                onSelectFolder = { selectedFolder = it },
+                onAddFolderClick = { showCreateFolderDialog = true },
+                onRenameFolder = { folderToRename = it },
+                onDeleteFolder = { folderToDelete = it },
+                itemCountProvider = { f ->
+                    when (f) {
+                        null -> servers.size
+                        "" -> servers.count { it.folder.isNullOrBlank() }
+                        else -> servers.count { it.folder == f }
+                    }
+                },
+                accentColor = CyanPrimary
+            )
+
             // Filter Pills Row (All / Online / Offline)
             if (servers.isNotEmpty()) {
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                        .padding(horizontal = 20.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     item {
@@ -256,24 +274,6 @@ fun ServersScreen(
                         )
                     }
                 }
-
-                // Folders Row
-                FolderFilterRow(
-                    folders = folders,
-                    selectedFolder = selectedFolder,
-                    onSelectFolder = { selectedFolder = it },
-                    onAddFolderClick = { showCreateFolderDialog = true },
-                    onRenameFolder = { folderToRename = it },
-                    onDeleteFolder = { folderToDelete = it },
-                    itemCountProvider = { f ->
-                        when (f) {
-                            null -> servers.size
-                            "" -> servers.count { it.folder.isNullOrBlank() }
-                            else -> servers.count { it.folder == f }
-                        }
-                    },
-                    accentColor = CyanPrimary
-                )
             }
 
             if (servers.isEmpty()) {
@@ -315,17 +315,31 @@ fun ServersScreen(
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
                         }
-                        Button(
-                            onClick = { navController.navigate("server_edit?serverId=-1") },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = CyanPrimary,
-                                contentColor = OnCyan
-                            ),
-                            shape = RoundedCornerShape(14.dp)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Add Your First Server", fontWeight = FontWeight.Bold)
+                            Button(
+                                onClick = { navController.navigate("server_edit?serverId=-1") },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = CyanPrimary,
+                                    contentColor = OnCyan
+                                ),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Add Server", fontWeight = FontWeight.Bold)
+                            }
+                            OutlinedButton(
+                                onClick = { showCreateFolderDialog = true },
+                                shape = RoundedCornerShape(14.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, CyanPrimary.copy(alpha = 0.5f))
+                            ) {
+                                Icon(Icons.Filled.CreateNewFolder, contentDescription = null, modifier = Modifier.size(18.dp), tint = CyanPrimary)
+                                Spacer(Modifier.width(8.dp))
+                                Text("New Folder", fontWeight = FontWeight.Bold, color = CyanPrimary)
+                            }
                         }
                     }
                 }
@@ -336,18 +350,33 @@ fun ServersScreen(
                         .padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                         Text(
-                            "No matching servers",
+                            text = if (!selectedFolder.isNullOrEmpty()) "Nessun server nella cartella \"$selectedFolder\"" else "Nessun server corrispondente",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onBackground
                         )
-                        Spacer(Modifier.height(4.dp))
                         Text(
-                            "No servers match the selected filter.",
+                            text = "Aggiungi un server a questa cartella o seleziona un'altra cartella.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
+                        Button(
+                            onClick = { navController.navigate("server_edit?serverId=-1") },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = CyanPrimary,
+                                contentColor = OnCyan
+                            ),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Aggiungi Server", fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             } else {

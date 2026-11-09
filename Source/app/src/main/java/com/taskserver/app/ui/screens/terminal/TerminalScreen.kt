@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -190,6 +191,117 @@ fun TerminalScreen(
 
             // Control Actions
             if (uiState.isInteractive) {
+                var commandInput by remember { mutableStateOf("") }
+
+                // Quick command input bar for effortless typing and sending commands
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Quick SUDO prefix button
+                    Surface(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, CyanPrimary.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                            .clickable {
+                                commandInput = if (commandInput.startsWith("sudo ")) {
+                                    commandInput.removePrefix("sudo ")
+                                } else {
+                                    "sudo $commandInput"
+                                }
+                            },
+                        color = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        Text(
+                            text = "SUDO",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = MonospaceFontFamily,
+                                fontSize = 11.sp
+                            ),
+                            color = CyanPrimary
+                        )
+                    }
+
+                    // Input field
+                    OutlinedTextField(
+                        value = commandInput,
+                        onValueChange = { commandInput = it },
+                        placeholder = {
+                            Text(
+                                "Comando shell...",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = MonospaceFontFamily,
+                                    fontSize = 12.sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                        },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                            fontFamily = MonospaceFontFamily,
+                            fontSize = 13.sp
+                        ),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Send
+                        ),
+                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                            onSend = {
+                                if (commandInput.isNotBlank()) {
+                                    viewModel.sendInteractiveCommand(commandInput.trim())
+                                    commandInput = ""
+                                }
+                            }
+                        ),
+                        trailingIcon = {
+                            if (commandInput.isNotEmpty()) {
+                                IconButton(onClick = { commandInput = "" }) {
+                                    Icon(
+                                        Icons.Filled.Clear,
+                                        contentDescription = "Cancella",
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CyanPrimary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            cursorColor = CyanPrimary
+                        )
+                    )
+
+                    // Send Button
+                    IconButton(
+                        onClick = {
+                            if (commandInput.isNotBlank()) {
+                                viewModel.sendInteractiveCommand(commandInput.trim())
+                                commandInput = ""
+                            }
+                        },
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(CyanPrimary)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Invia",
+                            tint = OnCyan,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
                 // Interactive Toolbar for SSH Mobile Accessory Keys
                 Row(
                     modifier = Modifier
@@ -202,6 +314,7 @@ fun TerminalScreen(
                         "ESC" to byteArrayOf(0x1B),
                         "TAB" to byteArrayOf(0x09),
                         "CTRL+C" to byteArrayOf(0x03),
+                        "ENTER" to byteArrayOf(0x0D),
                         "▲" to byteArrayOf(0x1B, 0x5B, 0x41),
                         "▼" to byteArrayOf(0x1B, 0x5B, 0x42),
                         "◀" to byteArrayOf(0x1B, 0x5B, 0x44),

@@ -42,6 +42,9 @@ fun XTermWebView(
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                isFocusable = true
+                isFocusableInTouchMode = true
+                requestFocus()
 
                 settings.apply {
                     javaScriptEnabled = true

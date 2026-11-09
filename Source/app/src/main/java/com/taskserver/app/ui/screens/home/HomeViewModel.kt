@@ -3,11 +3,13 @@ package com.taskserver.app.ui.screens.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.taskserver.app.data.model.*
+import com.taskserver.app.data.repository.FolderRepository
 import com.taskserver.app.data.repository.LogRepository
 import com.taskserver.app.data.repository.ServerRepository
 import com.taskserver.app.data.repository.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class HomeUiState(
@@ -22,8 +24,15 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val serverRepository: ServerRepository,
     private val taskRepository: TaskRepository,
-    private val logRepository: LogRepository
+    private val logRepository: LogRepository,
+    private val folderRepository: FolderRepository
 ) : ViewModel() {
+
+    fun createFolder(name: String, type: String = "SERVER") {
+        viewModelScope.launch {
+            folderRepository.createFolder(name, type)
+        }
+    }
 
     val uiState: StateFlow<HomeUiState> = combine(
         serverRepository.getAllServers(),
