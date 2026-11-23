@@ -82,13 +82,10 @@ fun TaskBuilderScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .displayCutoutPadding()
-                    .padding(top = 12.dp, start = 8.dp, end = 8.dp),
+                windowInsets = WindowInsets.statusBars.add(WindowInsets(top = 8.dp)),
                 title = {
                     Text(
-                        text = if (isEditMode) "Configure Automation" else "New Automation",
+                        text = if (isEditMode) "Modifica Automazione" else "Nuova Automazione",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = (-0.5).sp

@@ -41,15 +41,12 @@ fun SettingsScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .displayCutoutPadding()
-                    .padding(top = 12.dp, start = 8.dp, end = 8.dp),
+                windowInsets = WindowInsets.statusBars.add(WindowInsets(top = 8.dp)),
                 title = {
                     Text(
-                        text = "Preferences",
+                        text = "Impostazioni",
                         style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.5).sp
                         ),
                         color = MaterialTheme.colorScheme.onBackground

@@ -17,7 +17,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -42,8 +41,6 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val isDark = LocalThemeIsDark.current
-    var showCreateFolderDialog by remember { mutableStateOf(false) }
 
     val onlineCount = uiState.statusMap.count { it.value == ServerStatus.ONLINE }
     val offlineCount = uiState.statusMap.count { it.value == ServerStatus.OFFLINE }
@@ -52,61 +49,27 @@ fun HomeScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .displayCutoutPadding()
-                    .padding(top = 12.dp, start = 8.dp, end = 8.dp),
+                windowInsets = WindowInsets.statusBars.add(WindowInsets(top = 8.dp)),
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(CyanPrimary, Color(0xFF0072FF))
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Filled.Terminal,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-
-                        Column {
-                            Text(
-                                text = "TaskServer",
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    letterSpacing = (-0.5).sp
-                                ),
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Text(
-                                text = "Automazione & Gestione Server",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    letterSpacing = 0.8.sp
-                                ),
-                                color = CyanPrimary
-                            )
-                        }
+                    Column {
+                        Text(
+                            text = "TaskServer",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = (-0.5).sp
+                            ),
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "Monitoraggio & Automazione",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CyanPrimary
+                        )
                     }
                 },
                 actions = {
                     IconButton(
-                        onClick = { navController.navigate("settings") },
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                        onClick = { navController.navigate("settings") }
                     ) {
                         Icon(
                             Icons.Filled.Settings,
@@ -126,31 +89,31 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(22.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // ═══════════════════════════════════════════════════════
-            //  STATISTICHE RAPIDE
+            //  STATISTICHE PRINCIPALI
             // ═══════════════════════════════════════════════════════
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 BentoStatCard(
                     title = "Server",
                     value = "${uiState.serverCount}",
                     subtext = if (uiState.serverCount > 0) "$onlineCount Online" else "Nessun server",
                     icon = Icons.Filled.Dns,
-                    glowColor = CyanPrimary,
+                    accentColor = CyanPrimary,
                     modifier = Modifier.weight(1f),
                     onClick = { navController.navigate("servers") }
                 )
                 BentoStatCard(
                     title = "Automazioni",
                     value = "${uiState.taskCount}",
-                    subtext = "Task configurati",
+                    subtext = if (uiState.taskCount > 0) "${uiState.taskCount} create" else "Nessun task",
                     icon = Icons.Filled.Bolt,
-                    glowColor = PurpleSecondary,
+                    accentColor = PurpleSecondary,
                     modifier = Modifier.weight(1f),
                     onClick = { navController.navigate("tasks") }
                 )
@@ -159,10 +122,11 @@ fun HomeScreen(
             // ═══════════════════════════════════════════════════════
             //  AZIONI RAPIDE
             // ═══════════════════════════════════════════════════════
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                ModernSectionHeader(
-                    title = "Azioni Rapide",
-                    tag = "SHORTCUTS"
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Azioni Rapide",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onBackground
                 )
 
                 Row(
@@ -190,40 +154,34 @@ fun HomeScreen(
                         modifier = Modifier.weight(1f),
                         onClick = { navController.navigate("ssh") }
                     )
-                    QuickActionButton(
-                        title = "Cartella",
-                        icon = Icons.Filled.CreateNewFolder,
-                        accentColor = Color(0xFFFFB74D),
-                        modifier = Modifier.weight(1f),
-                        onClick = { showCreateFolderDialog = true }
-                    )
                 }
             }
 
             // ═══════════════════════════════════════════════════════
             //  I TUOI SERVER
             // ═══════════════════════════════════════════════════════
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ModernSectionHeader(
-                        title = "I tuoi Server",
-                        tag = "${uiState.servers.size} TOTALI"
+                    Text(
+                        text = "I tuoi Server",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     if (uiState.servers.isNotEmpty()) {
                         TextButton(
                             onClick = { navController.navigate("servers") },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
                         ) {
                             Text(
                                 "Vedi tutti",
                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                 color = CyanPrimary
                             )
-                            Spacer(Modifier.width(4.dp))
+                            Spacer(Modifier.width(2.dp))
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = null,
@@ -235,21 +193,23 @@ fun HomeScreen(
                 }
 
                 if (uiState.servers.isEmpty()) {
-                    GlassCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        glowColor = CyanPrimary,
-                        borderAlpha = 0.15f,
-                        cornerRadius = 20.dp
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable { navController.navigate("server_edit?serverId=-1") }
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                        color = MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(24.dp),
+                                .padding(20.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(54.dp)
+                                    .size(44.dp)
                                     .clip(CircleShape)
                                     .background(CyanPrimary.copy(alpha = 0.12f)),
                                 contentAlignment = Alignment.Center
@@ -258,50 +218,37 @@ fun HomeScreen(
                                     Icons.Filled.Dns,
                                     contentDescription = null,
                                     tint = CyanPrimary,
-                                    modifier = Modifier.size(28.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
-                            Spacer(Modifier.height(14.dp))
+                            Spacer(Modifier.height(10.dp))
                             Text(
                                 text = "Nessun server configurato",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onBackground
                             )
-                            Spacer(Modifier.height(6.dp))
+                            Spacer(Modifier.height(4.dp))
                             Text(
-                                text = "Aggiungi i tuoi server Linux, Raspberry Pi o NAS per monitorare la raggiungibilità ed eseguire task con un tocco.",
+                                text = "Tocca qui per aggiungere il tuo primo server",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                lineHeight = 18.sp
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Spacer(Modifier.height(18.dp))
-                            Button(
-                                onClick = { navController.navigate("server_edit?serverId=-1") },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = CyanPrimary,
-                                    contentColor = OnCyan
-                                ),
-                                shape = RoundedCornerShape(14.dp)
-                            ) {
-                                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Aggiungi Server", fontWeight = FontWeight.Bold)
-                            }
                         }
                     }
                 } else {
-                    uiState.servers.take(4).forEach { server ->
-                        val status = uiState.statusMap[server.id] ?: ServerStatus.UNKNOWN
-                        HomeServerNodeCard(
-                            serverName = server.name,
-                            host = server.host,
-                            port = server.port,
-                            username = server.username,
-                            status = status,
-                            onNodeClick = { navController.navigate("server_edit?serverId=${server.id}") },
-                            onTerminalClick = { navController.navigate("terminal/-1/${server.id}") }
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        uiState.servers.take(4).forEach { server ->
+                            val status = uiState.statusMap[server.id] ?: ServerStatus.UNKNOWN
+                            HomeServerNodeCard(
+                                serverName = server.name,
+                                host = server.host,
+                                port = server.port,
+                                username = server.username,
+                                status = status,
+                                onNodeClick = { navController.navigate("server_edit?serverId=${server.id}") },
+                                onTerminalClick = { navController.navigate("terminal/-1/${server.id}") }
+                            )
+                        }
                     }
                 }
             }
@@ -309,27 +256,28 @@ fun HomeScreen(
             // ═══════════════════════════════════════════════════════
             //  ATTIVITÀ RECENTE
             // ═══════════════════════════════════════════════════════
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ModernSectionHeader(
-                        title = "Attività Recente",
-                        tag = "LOGS"
+                    Text(
+                        text = "Attività Recente",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     if (uiState.recentLogs.isNotEmpty()) {
                         TextButton(
                             onClick = { navController.navigate("logs") },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
                         ) {
                             Text(
                                 "Tutti i Log",
                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                 color = CyanPrimary
                             )
-                            Spacer(Modifier.width(4.dp))
+                            Spacer(Modifier.width(2.dp))
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = null,
@@ -341,55 +289,43 @@ fun HomeScreen(
                 }
 
                 if (uiState.recentLogs.isEmpty()) {
-                    GlassCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        glowColor = PurpleSecondary,
-                        borderAlpha = 0.12f,
-                        cornerRadius = 18.dp
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                        color = MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(18.dp),
+                                .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(PurpleSecondary.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Filled.History,
-                                    contentDescription = null,
-                                    tint = PurpleSecondary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Spacer(Modifier.width(14.dp))
-                            Column {
-                                Text(
-                                    text = "Nessuna esecuzione recente",
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                                Text(
-                                    text = "I risultati delle esecuzioni appariranno qui",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Icon(
+                                Icons.Filled.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                text = "Nessuna esecuzione recente registrata",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 } else {
-                    uiState.recentLogs.take(4).forEach { log ->
-                        RecentActivityRow(
-                            taskName = log.taskName,
-                            serverName = log.serverName,
-                            status = log.status,
-                            timestamp = log.startedAt
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        uiState.recentLogs.take(4).forEach { log ->
+                            RecentActivityRow(
+                                taskName = log.taskName,
+                                serverName = log.serverName,
+                                status = log.status,
+                                timestamp = log.startedAt
+                            )
+                        }
                     }
                 }
             }
@@ -397,21 +333,7 @@ fun HomeScreen(
             Spacer(Modifier.height(16.dp))
         }
     }
-
-    if (showCreateFolderDialog) {
-        CreateFolderDialog(
-            onDismiss = { showCreateFolderDialog = false },
-            onConfirm = { name ->
-                viewModel.createFolder(name)
-                showCreateFolderDialog = false
-            }
-        )
-    }
 }
-
-// ═══════════════════════════════════════════════════════
-//  SUB-COMPONENTS
-// ═══════════════════════════════════════════════════════
 
 @Composable
 private fun BentoStatCard(
@@ -419,66 +341,60 @@ private fun BentoStatCard(
     value: String,
     subtext: String,
     icon: ImageVector,
-    glowColor: Color,
+    accentColor: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    GlassCard(
-        modifier = modifier,
-        glowColor = glowColor,
-        borderAlpha = 0.20f,
-        cornerRadius = 22.dp,
-        onClick = onClick
+    Surface(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .border(1.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(16.dp)),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 2.dp
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(11.dp))
-                        .background(glowColor.copy(alpha = 0.14f)),
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(accentColor.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        icon,
+                        imageVector = icon,
                         contentDescription = null,
-                        tint = glowColor,
-                        modifier = Modifier.size(20.dp)
+                        tint = accentColor,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
-
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.size(16.dp)
-                )
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(10.dp))
 
             Text(
                 text = value,
-                style = MaterialTheme.typography.displaySmall.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = (-0.5).sp
-                ),
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onBackground
-            )
+            Spacer(Modifier.height(2.dp))
 
             Text(
                 text = subtext,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -495,14 +411,14 @@ private fun QuickActionButton(
 ) {
     Surface(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
-            .border(1.dp, accentColor.copy(alpha = 0.22f), RoundedCornerShape(16.dp)),
+            .border(1.dp, accentColor.copy(alpha = 0.22f), RoundedCornerShape(14.dp)),
         color = MaterialTheme.colorScheme.surfaceVariant,
         tonalElevation = 1.dp
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 14.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -545,15 +461,22 @@ private fun HomeServerNodeCard(
     onNodeClick: () -> Unit,
     onTerminalClick: () -> Unit
 ) {
+    val statusColor = when (status) {
+        ServerStatus.ONLINE -> ColorOnline
+        ServerStatus.OFFLINE -> ColorOffline
+        ServerStatus.CHECKING -> ColorChecking
+        ServerStatus.UNKNOWN -> CyanPrimary
+    }
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onNodeClick)
             .border(
                 1.dp,
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
-                RoundedCornerShape(18.dp)
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                RoundedCornerShape(16.dp)
             ),
         color = MaterialTheme.colorScheme.surfaceVariant,
         tonalElevation = 2.dp
@@ -561,25 +484,25 @@ private fun HomeServerNodeCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(40.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    .background(statusColor.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Filled.Dns,
                     contentDescription = null,
-                    tint = if (status == ServerStatus.ONLINE) ColorOnline else CyanPrimary,
-                    modifier = Modifier.size(22.dp)
+                    tint = statusColor,
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -604,24 +527,22 @@ private fun HomeServerNodeCard(
 
             Spacer(Modifier.width(8.dp))
 
-            // Status Badge
             StatusBadge(status = status, showLabel = true, dotSize = 6.dp)
 
             Spacer(Modifier.width(8.dp))
 
-            // Quick terminal launcher button
             FilledIconButton(
                 onClick = onTerminalClick,
-                modifier = Modifier.size(34.dp),
+                modifier = Modifier.size(36.dp),
                 shape = RoundedCornerShape(10.dp),
                 colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = CyanPrimary.copy(alpha = 0.15f),
-                    contentColor = CyanPrimary
+                    containerColor = CyanPrimary,
+                    contentColor = OnCyan
                 )
             ) {
                 Icon(
                     Icons.Filled.Terminal,
-                    contentDescription = "Quick SSH",
+                    contentDescription = "Terminale SSH",
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -649,23 +570,23 @@ private fun RecentActivityRow(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
             .border(
                 1.dp,
                 MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                RoundedCornerShape(16.dp)
+                RoundedCornerShape(14.dp)
             ),
         color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(30.dp)
                     .clip(CircleShape)
                     .background(statusColor.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center
@@ -698,10 +619,9 @@ private fun RecentActivityRow(
                 )
             }
 
-            // Status chip
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(6.dp))
                     .background(statusColor.copy(alpha = 0.12f))
                     .padding(horizontal = 8.dp, vertical = 3.dp)
             ) {
@@ -713,45 +633,6 @@ private fun RecentActivityRow(
                         fontWeight = FontWeight.Bold
                     ),
                     color = statusColor
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ModernSectionHeader(
-    title: String,
-    tag: String? = null
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.2).sp
-            ),
-            color = MaterialTheme.colorScheme.onBackground
-        )
-
-        if (tag != null) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainer)
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            ) {
-                Text(
-                    text = tag,
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

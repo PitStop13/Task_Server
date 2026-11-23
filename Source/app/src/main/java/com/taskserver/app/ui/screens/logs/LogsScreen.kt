@@ -73,10 +73,7 @@ fun LogsScreen(
         },
         topBar = {
             TopAppBar(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .displayCutoutPadding()
-                    .padding(top = 12.dp, start = 8.dp, end = 8.dp),
+                windowInsets = WindowInsets.statusBars.add(WindowInsets(top = 8.dp)),
                 title = {
                     Column {
                         Row(
@@ -84,9 +81,9 @@ fun LogsScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "Audit History",
+                                text = "Cronologia Log",
                                 style = MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.Bold,
                                     letterSpacing = (-0.5).sp
                                 ),
                                 color = MaterialTheme.colorScheme.onBackground

@@ -79,73 +79,38 @@ fun TasksScreen(
         },
         topBar = {
             TopAppBar(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .displayCutoutPadding()
-                    .padding(top = 12.dp, start = 8.dp, end = 8.dp),
+                windowInsets = WindowInsets.statusBars.add(WindowInsets(top = 8.dp)),
                 title = {
                     Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = "Automations",
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    letterSpacing = (-0.5).sp
-                                ),
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(PurpleSecondary.copy(alpha = 0.15f))
-                                    .padding(horizontal = 7.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "${tasks.size} SCRIPTS",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontFamily = MonospaceFontFamily,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 9.sp
-                                    ),
-                                    color = PurpleSecondary
-                                )
-                            }
-                        }
                         Text(
-                            text = "Single-tap remote commands & workflows",
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "Automazioni",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = (-0.5).sp
+                            ),
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "${tasks.size} ${if (tasks.size == 1) "automazione" else "automazioni"}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = PurpleBright
                         )
                     }
                 },
                 actions = {
-                    // Button to add folder
-                    IconButton(
-                        onClick = { showCreateFolderDialog = true },
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.CreateNewFolder,
-                            contentDescription = "Aggiungi cartella",
-                            modifier = Modifier.size(20.dp),
-                            tint = PurpleBright
-                        )
+                    if (folders.isNotEmpty()) {
+                        IconButton(
+                            onClick = { showCreateFolderDialog = true }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.CreateNewFolder,
+                                contentDescription = "Nuova cartella",
+                                tint = PurpleBright
+                            )
+                        }
                     }
-
-                    Spacer(Modifier.width(6.dp))
-
                     IconButton(
-                        onClick = { navController.navigate("settings") },
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                        onClick = { navController.navigate("settings") }
                     ) {
                         Icon(
                             Icons.Filled.Settings,
@@ -164,10 +129,9 @@ fun TasksScreen(
                 onClick = { navController.navigate("task_builder?taskId=-1") },
                 containerColor = PurpleSecondary,
                 contentColor = OnPurple,
-                shape = RoundedCornerShape(18.dp),
-                elevation = FloatingActionButtonDefaults.elevation(6.dp),
+                shape = RoundedCornerShape(16.dp),
                 icon = { Icon(Icons.Filled.Add, stringResource(R.string.add), modifier = Modifier.size(20.dp)) },
-                text = { Text("New Automation", fontWeight = FontWeight.Bold) }
+                text = { Text("Nuova Automazione", fontWeight = FontWeight.Bold) }
             )
         }
     ) { padding ->
@@ -176,23 +140,25 @@ fun TasksScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Folders row - Always visible so user can create, view, and manage folders
-            FolderFilterRow(
-                folders = folders,
-                selectedFolder = selectedFolder,
-                onSelectFolder = { selectedFolder = it },
-                onAddFolderClick = { showCreateFolderDialog = true },
-                onRenameFolder = { folderToRename = it },
-                onDeleteFolder = { folderToDelete = it },
-                itemCountProvider = { f ->
-                    when (f) {
-                        null -> tasks.size
-                        "" -> tasks.count { it.folder.isNullOrBlank() }
-                        else -> tasks.count { it.folder == f }
-                    }
-                },
-                accentColor = PurpleBright
-            )
+            // Folders row - only visible if folders exist
+            if (folders.isNotEmpty()) {
+                FolderFilterRow(
+                    folders = folders,
+                    selectedFolder = selectedFolder,
+                    onSelectFolder = { selectedFolder = it },
+                    onAddFolderClick = { showCreateFolderDialog = true },
+                    onRenameFolder = { folderToRename = it },
+                    onDeleteFolder = { folderToDelete = it },
+                    itemCountProvider = { f ->
+                        when (f) {
+                            null -> tasks.size
+                            "" -> tasks.count { it.folder.isNullOrBlank() }
+                            else -> tasks.count { it.folder == f }
+                        }
+                    },
+                    accentColor = PurpleBright
+                )
+            }
 
             if (tasks.isEmpty()) {
                 Box(
@@ -207,7 +173,7 @@ fun TasksScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(72.dp)
+                                .size(64.dp)
                                 .clip(CircleShape)
                                 .background(PurpleSecondary.copy(alpha = 0.12f)),
                             contentAlignment = Alignment.Center
@@ -215,49 +181,36 @@ fun TasksScreen(
                             Icon(
                                 Icons.Filled.Bolt,
                                 contentDescription = null,
-                                modifier = Modifier.size(36.dp),
+                                modifier = Modifier.size(32.dp),
                                 tint = PurpleSecondary
                             )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "No Automations Defined",
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                text = "Nessuna automazione",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                             Spacer(Modifier.height(6.dp))
                             Text(
-                                text = "Create multi-command shell sequences (e.g. restart service, backup db, update packages) and execute them in one tap.",
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = "Crea sequenze di comandi (es. aggiornamento pacchetti, riavvio servizi, backup) ed eseguile con un tocco.",
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                lineHeight = 18.sp
                             )
                         }
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Button(
+                            onClick = { navController.navigate("task_builder?taskId=-1") },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PurpleSecondary,
+                                contentColor = OnPurple
+                            ),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Button(
-                                onClick = { navController.navigate("task_builder?taskId=-1") },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = PurpleSecondary,
-                                    contentColor = OnPurple
-                                ),
-                                shape = RoundedCornerShape(14.dp)
-                            ) {
-                                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Create Automation", fontWeight = FontWeight.Bold)
-                            }
-                            OutlinedButton(
-                                onClick = { showCreateFolderDialog = true },
-                                shape = RoundedCornerShape(14.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, PurpleSecondary.copy(alpha = 0.5f))
-                            ) {
-                                Icon(Icons.Filled.CreateNewFolder, contentDescription = null, modifier = Modifier.size(18.dp), tint = PurpleBright)
-                                Spacer(Modifier.width(8.dp))
-                                Text("New Folder", fontWeight = FontWeight.Bold, color = PurpleBright)
-                            }
+                            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Crea Automazione", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -278,7 +231,7 @@ fun TasksScreen(
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            text = "Aggiungi una nuova automazione a questa cartella o cambia filtro.",
+                            text = "Aggiungi una nuova automazione a questa cartella o seleziona un altro filtro.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -289,18 +242,18 @@ fun TasksScreen(
                                 containerColor = PurpleSecondary,
                                 contentColor = OnPurple
                             ),
-                            shape = RoundedCornerShape(14.dp)
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Create Automation", fontWeight = FontWeight.Bold)
+                            Text("Crea Automazione", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 90.dp, start = 20.dp, end = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(top = 12.dp, bottom = 90.dp, start = 16.dp, end = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(filteredTasks, key = { it.id }) { task ->
@@ -325,77 +278,79 @@ fun TasksScreen(
         }
     }
 
-    // Modern Modal server selector
+    // Modal server selector for executing an unpinned task
     if (taskToRun != null) {
+        val selectedTaskId = taskToRun!!
         ModalBottomSheet(
             onDismissRequest = { taskToRun = null },
-            shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.outlineVariant) }
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 36.dp, start = 24.dp, end = 24.dp),
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Column {
                     Text(
-                        text = "Select Target Server",
+                        text = "Seleziona Server",
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+                    Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "Choose the node to execute this automation on",
+                        text = "Scegli il server su cui eseguire l'automazione",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
                 if (servers.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(ColorError.copy(alpha = 0.1f))
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "No servers available. Add a server node first.",
-                            color = ColorError,
-                            style = MaterialTheme.typography.bodyMedium
+                            text = "Nessun server disponibile. Configura prima un server.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(16.dp)
                         )
                     }
                 } else {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 350.dp)
                     ) {
-                        items(servers) { srv ->
+                        items(servers, key = { it.id }) { srv ->
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(16.dp))
+                                    .clip(RoundedCornerShape(14.dp))
                                     .clickable {
-                                        val tid = taskToRun
                                         taskToRun = null
-                                        navController.navigate("terminal/$tid/${srv.id}")
+                                        navController.navigate("terminal/$selectedTaskId/${srv.id}")
                                     }
-                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
-                                color = MaterialTheme.colorScheme.surfaceContainer
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp)),
+                                color = MaterialTheme.colorScheme.surfaceVariant
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp),
+                                        .padding(14.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(38.dp)
+                                            .size(40.dp)
                                             .clip(RoundedCornerShape(10.dp))
-                                            .background(CyanPrimary.copy(alpha = 0.14f)),
+                                            .background(CyanPrimary.copy(alpha = 0.15f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
@@ -405,12 +360,12 @@ fun TasksScreen(
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
-                                    Spacer(Modifier.width(14.dp))
+                                    Spacer(Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = srv.name,
                                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                            color = MaterialTheme.colorScheme.onBackground
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
                                             text = "${srv.username}@${srv.host}:${srv.port}",
@@ -418,12 +373,24 @@ fun TasksScreen(
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
-                                    Icon(
-                                        Icons.Filled.PlayArrow,
-                                        contentDescription = "Run",
-                                        tint = PurpleBright,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                                    FilledIconButton(
+                                        onClick = {
+                                            taskToRun = null
+                                            navController.navigate("terminal/$selectedTaskId/${srv.id}")
+                                        },
+                                        modifier = Modifier.size(36.dp),
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = PurpleSecondary,
+                                            contentColor = OnPurple
+                                        )
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.PlayArrow,
+                                            contentDescription = "Esegui",
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -433,12 +400,12 @@ fun TasksScreen(
         }
     }
 
-    // Modern Delete confirmation dialog
+    // Delete confirmation dialog
     taskToDelete?.let { taskId ->
         AlertDialog(
             onDismissRequest = { taskToDelete = null },
-            shape = RoundedCornerShape(22.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            shape = RoundedCornerShape(18.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
             icon = {
                 Box(
                     modifier = Modifier
@@ -448,23 +415,23 @@ fun TasksScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        Icons.Filled.DeleteOutline,
+                        Icons.Filled.Delete,
                         contentDescription = null,
                         tint = ColorError,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             },
             title = {
                 Text(
-                    text = "Delete Automation?",
+                    text = "Elimina automazione",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             text = {
                 Text(
-                    text = "This will remove the task and all its configured commands permanently.",
+                    text = "Sei sicuro di voler eliminare questa automazione? L'operazione non può essere annullata.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -475,85 +442,82 @@ fun TasksScreen(
                         viewModel.deleteTask(taskId)
                         taskToDelete = null
                         scope.launch {
-                            SnackbarController.showAlert(snackbarHostState, context.getString(R.string.tasks_deleted))
+                            SnackbarController.showAlert(snackbarHostState, "Automazione eliminata")
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = ColorError,
                         contentColor = Color.White
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Delete", fontWeight = FontWeight.Bold)
+                    Text("Elimina", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { taskToDelete = null },
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Annulla", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         )
     }
 
-    // Create Folder Dialog
+    // Move to folder dialog
+    taskToMoveFolder?.let { task ->
+        MoveToFolderDialog(
+            currentFolder = task.folder,
+            availableFolders = folders,
+            onSelectFolder = { folderName ->
+                viewModel.updateTaskFolder(task.id, folderName)
+                taskToMoveFolder = null
+                scope.launch {
+                    SnackbarController.showAlert(
+                        snackbarHostState,
+                        if (folderName != null) "Spostato in \"$folderName\"" else "Rimosso dalla cartella"
+                    )
+                }
+            },
+            onCreateNewFolder = {
+                showCreateFolderDialog = true
+            },
+            onDismiss = { taskToMoveFolder = null }
+        )
+    }
+
     if (showCreateFolderDialog) {
         CreateFolderDialog(
-            title = "Nuova Cartella Task",
             onDismiss = { showCreateFolderDialog = false },
-            onConfirm = { folderName ->
-                viewModel.createFolder(folderName)
+            onConfirm = { name ->
+                viewModel.createFolder(name)
                 showCreateFolderDialog = false
             }
         )
     }
 
-    // Rename Folder Dialog
     folderToRename?.let { folder ->
         RenameFolderDialog(
             folder = folder,
             onDismiss = { folderToRename = null },
             onConfirm = { newName ->
                 viewModel.renameFolder(folder, newName)
-                if (selectedFolder == folder.name) {
-                    selectedFolder = newName
-                }
                 folderToRename = null
             }
         )
     }
 
-    // Delete Folder Dialog
     folderToDelete?.let { folder ->
         DeleteFolderDialog(
             folder = folder,
             onDismiss = { folderToDelete = null },
             onConfirm = {
                 viewModel.deleteFolder(folder)
+                folderToDelete = null
                 if (selectedFolder == folder.name) {
                     selectedFolder = null
                 }
-                folderToDelete = null
-            }
-        )
-    }
-
-    // Move Task to Folder Dialog
-    taskToMoveFolder?.let { task ->
-        MoveToFolderDialog(
-            currentFolder = task.folder,
-            availableFolders = folders,
-            onSelectFolder = { newFolder ->
-                viewModel.updateTaskFolder(task.id, newFolder)
-                taskToMoveFolder = null
-            },
-            onCreateNewFolder = {
-                showCreateFolderDialog = true
-            },
-            onDismiss = {
-                taskToMoveFolder = null
             }
         )
     }

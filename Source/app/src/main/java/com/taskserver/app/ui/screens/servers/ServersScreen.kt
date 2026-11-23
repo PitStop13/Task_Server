@@ -7,7 +7,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,12 +44,12 @@ fun ServersScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val servers = uiState.servers
-    val folders = uiState.folders
     val statusMap = uiState.statusMap
+    val folders = uiState.folders
     val isChecking = statusMap.values.any { it == ServerStatus.CHECKING }
 
     var selectedFilter by remember { mutableStateOf(ServerFilter.ALL) }
-    var selectedFolder by remember { mutableStateOf<String?>(null) } // null = all, "" = ungrouped, or folder name
+    var selectedFolder by remember { mutableStateOf<String?>(null) }
 
     // Folder dialog states
     var showCreateFolderDialog by remember { mutableStateOf(false) }
@@ -70,7 +69,6 @@ fun ServersScreen(
         }
     }
 
-    // Rotate animation for Ping icon when checking
     val infiniteTransition = rememberInfiniteTransition(label = "pingRotate")
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -107,94 +105,45 @@ fun ServersScreen(
         },
         topBar = {
             TopAppBar(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .displayCutoutPadding()
-                    .padding(top = 12.dp, start = 8.dp, end = 8.dp),
+                windowInsets = WindowInsets.statusBars.add(WindowInsets(top = 8.dp)),
                 title = {
                     Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = "I tuoi Server",
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    letterSpacing = (-0.5).sp
-                                ),
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(CyanPrimary.copy(alpha = 0.15f))
-                                    .padding(horizontal = 7.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "${servers.size} NODES",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontFamily = MonospaceFontFamily,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 9.sp
-                                    ),
-                                    color = CyanPrimary
-                                )
-                            }
-                        }
                         Text(
-                            text = if (isChecking) "Probing node connectivity..." else "$onlineCount Online • $offlineCount Offline",
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            text = "I tuoi Server",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = (-0.5).sp
+                            ),
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = if (isChecking) "Verifica connettività in corso..." else "$onlineCount Online • $offlineCount Offline",
+                            style = MaterialTheme.typography.labelSmall,
                             color = if (isChecking) ColorChecking else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
                 actions = {
-                    // Button to add folder
-                    IconButton(
-                        onClick = { showCreateFolderDialog = true },
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                    ) {
+                    if (folders.isNotEmpty()) {
+                        IconButton(onClick = { showCreateFolderDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Filled.CreateNewFolder,
+                                contentDescription = "Nuova cartella",
+                                tint = CyanPrimary
+                            )
+                        }
+                    }
+
+                    IconButton(onClick = { viewModel.checkAllConnectivity() }) {
                         Icon(
-                            imageVector = Icons.Filled.CreateNewFolder,
-                            contentDescription = "Aggiungi cartella",
-                            modifier = Modifier.size(20.dp),
+                            imageVector = Icons.Filled.Refresh,
+                            contentDescription = "Aggiorna stato",
+                            modifier = Modifier.rotate(if (isChecking) rotation else 0f),
                             tint = CyanPrimary
                         )
                     }
 
-                    Spacer(Modifier.width(6.dp))
-
-                    // Ping all connectivity button
-                    IconButton(
-                        onClick = { viewModel.checkAllConnectivity() },
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Refresh,
-                            contentDescription = "Ping All Nodes",
-                            modifier = Modifier
-                                .size(20.dp)
-                                .then(if (isChecking) Modifier.rotate(rotation) else Modifier),
-                            tint = if (isChecking) ColorChecking else CyanPrimary
-                        )
-                    }
-
-                    Spacer(Modifier.width(6.dp))
-
-                    IconButton(
-                        onClick = { navController.navigate("settings") },
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                    ) {
+                    IconButton(onClick = { navController.navigate("settings") }) {
                         Icon(
                             Icons.Filled.Settings,
                             contentDescription = stringResource(R.string.settings),
@@ -212,10 +161,9 @@ fun ServersScreen(
                 onClick = { navController.navigate("server_edit?serverId=-1") },
                 containerColor = CyanPrimary,
                 contentColor = OnCyan,
-                shape = RoundedCornerShape(18.dp),
-                elevation = FloatingActionButtonDefaults.elevation(6.dp),
+                shape = RoundedCornerShape(16.dp),
                 icon = { Icon(Icons.Filled.Add, stringResource(R.string.add), modifier = Modifier.size(20.dp)) },
-                text = { Text("New Node", fontWeight = FontWeight.Bold) }
+                text = { Text("Nuovo Server", fontWeight = FontWeight.Bold) }
             )
         }
     ) { padding ->
@@ -224,56 +172,52 @@ fun ServersScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Folders Row - Always visible so user can create, view, and manage folders
-            FolderFilterRow(
-                folders = folders,
-                selectedFolder = selectedFolder,
-                onSelectFolder = { selectedFolder = it },
-                onAddFolderClick = { showCreateFolderDialog = true },
-                onRenameFolder = { folderToRename = it },
-                onDeleteFolder = { folderToDelete = it },
-                itemCountProvider = { f ->
-                    when (f) {
-                        null -> servers.size
-                        "" -> servers.count { it.folder.isNullOrBlank() }
-                        else -> servers.count { it.folder == f }
-                    }
-                },
-                accentColor = CyanPrimary
-            )
+            // Folders row - visible only when folders exist
+            if (folders.isNotEmpty()) {
+                FolderFilterRow(
+                    folders = folders,
+                    selectedFolder = selectedFolder,
+                    onSelectFolder = { selectedFolder = it },
+                    onAddFolderClick = { showCreateFolderDialog = true },
+                    onRenameFolder = { folderToRename = it },
+                    onDeleteFolder = { folderToDelete = it },
+                    itemCountProvider = { f ->
+                        when (f) {
+                            null -> servers.size
+                            "" -> servers.count { it.folder.isNullOrBlank() }
+                            else -> servers.count { it.folder == f }
+                        }
+                    },
+                    accentColor = CyanPrimary
+                )
+            }
 
-            // Filter Pills Row (All / Online / Offline)
+            // Quick Status Filter Row
             if (servers.isNotEmpty()) {
-                LazyRow(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 4.dp),
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    item {
-                        FilterChipTab(
-                            label = "All Nodes (${servers.size})",
-                            selected = selectedFilter == ServerFilter.ALL,
-                            activeColor = CyanPrimary,
-                            onClick = { selectedFilter = ServerFilter.ALL }
-                        )
-                    }
-                    item {
-                        FilterChipTab(
-                            label = "Online ($onlineCount)",
-                            selected = selectedFilter == ServerFilter.ONLINE,
-                            activeColor = ColorOnline,
-                            onClick = { selectedFilter = ServerFilter.ONLINE }
-                        )
-                    }
-                    item {
-                        FilterChipTab(
-                            label = "Offline ($offlineCount)",
-                            selected = selectedFilter == ServerFilter.OFFLINE,
-                            activeColor = ColorOffline,
-                            onClick = { selectedFilter = ServerFilter.OFFLINE }
-                        )
-                    }
+                    FilterChipTab(
+                        label = "Tutti (${servers.size})",
+                        selected = selectedFilter == ServerFilter.ALL,
+                        activeColor = CyanPrimary,
+                        onClick = { selectedFilter = ServerFilter.ALL }
+                    )
+                    FilterChipTab(
+                        label = "Online ($onlineCount)",
+                        selected = selectedFilter == ServerFilter.ONLINE,
+                        activeColor = ColorOnline,
+                        onClick = { selectedFilter = ServerFilter.ONLINE }
+                    )
+                    FilterChipTab(
+                        label = "Offline ($offlineCount)",
+                        selected = selectedFilter == ServerFilter.OFFLINE,
+                        activeColor = ColorOffline,
+                        onClick = { selectedFilter = ServerFilter.OFFLINE }
+                    )
                 }
             }
 
@@ -290,7 +234,7 @@ fun ServersScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(72.dp)
+                                .size(64.dp)
                                 .clip(CircleShape)
                                 .background(CyanPrimary.copy(alpha = 0.12f)),
                             contentAlignment = Alignment.Center
@@ -298,49 +242,36 @@ fun ServersScreen(
                             Icon(
                                 Icons.Filled.Dns,
                                 contentDescription = null,
-                                modifier = Modifier.size(36.dp),
+                                modifier = Modifier.size(32.dp),
                                 tint = CyanPrimary
                             )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                "No Servers Configured",
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                text = "Nessun server configurato",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                             Spacer(Modifier.height(6.dp))
                             Text(
-                                "Add your Linux servers, VPS, homelab machines or NAS to get started.",
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = "Aggiungi i tuoi server Linux, NAS o Raspberry Pi per monitorarli ed eseguire sessioni SSH.",
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                lineHeight = 18.sp
                             )
                         }
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Button(
+                            onClick = { navController.navigate("server_edit?serverId=-1") },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = CyanPrimary,
+                                contentColor = OnCyan
+                            ),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Button(
-                                onClick = { navController.navigate("server_edit?serverId=-1") },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = CyanPrimary,
-                                    contentColor = OnCyan
-                                ),
-                                shape = RoundedCornerShape(14.dp)
-                            ) {
-                                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Add Server", fontWeight = FontWeight.Bold)
-                            }
-                            OutlinedButton(
-                                onClick = { showCreateFolderDialog = true },
-                                shape = RoundedCornerShape(14.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, CyanPrimary.copy(alpha = 0.5f))
-                            ) {
-                                Icon(Icons.Filled.CreateNewFolder, contentDescription = null, modifier = Modifier.size(18.dp), tint = CyanPrimary)
-                                Spacer(Modifier.width(8.dp))
-                                Text("New Folder", fontWeight = FontWeight.Bold, color = CyanPrimary)
-                            }
+                            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Aggiungi Server", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -356,34 +287,21 @@ fun ServersScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = if (!selectedFolder.isNullOrEmpty()) "Nessun server nella cartella \"$selectedFolder\"" else "Nessun server corrispondente",
+                            text = "Nessun server corrispondente",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            text = "Aggiungi un server a questa cartella o seleziona un'altra cartella.",
+                            text = "Modifica i filtri per visualizzare altri server.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Button(
-                            onClick = { navController.navigate("server_edit?serverId=-1") },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = CyanPrimary,
-                                contentColor = OnCyan
-                            ),
-                            shape = RoundedCornerShape(14.dp)
-                        ) {
-                            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Aggiungi Server", fontWeight = FontWeight.Bold)
-                        }
                     }
                 }
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 90.dp, start = 20.dp, end = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 90.dp, start = 16.dp, end = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(filteredServers, key = { it.id }) { server ->
@@ -402,12 +320,12 @@ fun ServersScreen(
         }
     }
 
-    // Modern Delete confirmation dialog
+    // Delete confirmation dialog
     serverToDelete?.let { server ->
         AlertDialog(
             onDismissRequest = { serverToDelete = null },
-            shape = RoundedCornerShape(22.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            shape = RoundedCornerShape(18.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
             icon = {
                 Box(
                     modifier = Modifier
@@ -417,23 +335,23 @@ fun ServersScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        Icons.Filled.DeleteOutline,
+                        Icons.Filled.Delete,
                         contentDescription = null,
                         tint = ColorError,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             },
             title = {
                 Text(
-                    text = "Delete \"${server.name}\"?",
+                    text = "Elimina \"${server.name}\"?",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             text = {
                 Text(
-                    text = "This will permanently remove the server configuration and credentials from your device. This cannot be undone.",
+                    text = "La configurazione e le credenziali di accesso per questo server verranno rimosse dal dispositivo.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -443,22 +361,25 @@ fun ServersScreen(
                     onClick = {
                         viewModel.deleteServer(server)
                         serverToDelete = null
+                        scope.launch {
+                            SnackbarController.showAlert(snackbarHostState, "Server eliminato")
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = ColorError,
                         contentColor = Color.White
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Delete Server", fontWeight = FontWeight.Bold)
+                    Text("Elimina", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { serverToDelete = null },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Cancel")
+                    Text("Annulla", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         )
@@ -525,7 +446,6 @@ fun ServersScreen(
     }
 }
 
-
 @Composable
 private fun FilterChipTab(
     label: String,
@@ -535,23 +455,23 @@ private fun FilterChipTab(
 ) {
     Surface(
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(10.dp))
             .clickable(onClick = onClick),
-        color = if (selected) activeColor.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(12.dp),
+        color = if (selected) activeColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(10.dp),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            if (selected) activeColor else MaterialTheme.colorScheme.outlineVariant
+            if (selected) activeColor else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
         )
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                fontSize = 11.5.sp
+                fontSize = 11.sp
             ),
-            color = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
+            color = if (selected) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
         )
     }
 }

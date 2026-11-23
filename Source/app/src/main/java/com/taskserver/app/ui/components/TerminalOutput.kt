@@ -38,7 +38,6 @@ fun TerminalOutput(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 20.dp) // Sposta il componente più in basso come richiesto
             .shadow(16.dp, RoundedCornerShape(16.dp), ambientColor = Color.Black.copy(alpha = 0.5f))
             .clip(RoundedCornerShape(16.dp))
             .border(

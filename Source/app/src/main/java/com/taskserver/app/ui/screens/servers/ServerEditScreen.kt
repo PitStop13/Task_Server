@@ -93,10 +93,7 @@ fun ServerEditScreen(
         },
         topBar = {
             TopAppBar(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .displayCutoutPadding()
-                    .padding(top = 12.dp, start = 8.dp, end = 8.dp),
+                windowInsets = WindowInsets.statusBars.add(WindowInsets(top = 8.dp)),
                 title = {
                     Text(
                         text = if (isEditMode) "Modifica Server" else "Nuovo Server",

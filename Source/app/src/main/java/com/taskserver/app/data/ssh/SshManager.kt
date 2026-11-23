@@ -57,8 +57,8 @@ class SshManager @Inject constructor(
             ssh.addHostKeyVerifier(PromiscuousVerifier())
             ssh.connect(host, port)
             
-            // Nessun timeout socket durante l'esecuzione del comando
-            ssh.timeout = 0
+            // Timeout per evitare che il thread rimanga appeso
+            ssh.timeout = 15000 
             
             if (!privateKeyContent.isNullOrBlank()) {
                 val keyProvider: KeyProvider = ssh.loadKeys(privateKeyContent, null, null)
@@ -71,12 +71,37 @@ class SshManager @Inject constructor(
 
             emit(SshOutput.Started)
 
-            val fullScript = buildShellScript(commands, sudoPassword)
-            val fullCommand = "sh -c " + shellQuote(fullScript)
+            val effectiveSudo = sudoPassword?.takeIf { it.isNotBlank() } ?: password?.takeIf { it.isNotBlank() }
+
+            val validCommands = commands
+                .map { it.trim() }
+                .filter { it.isNotBlank() && !it.startsWith("#") }
+
+            if (validCommands.isEmpty()) {
+                emit(SshOutput.Complete(0))
+                return@flow
+            }
+
+            val scriptLines = mutableListOf<String>()
+            scriptLines.add("set -e")
+
+            // Se disponibile una password sudo, pre-autentica sudo se presente
+            if (!effectiveSudo.isNullOrBlank()) {
+                scriptLines.add("printf '%s\\n' ${shellQuote(effectiveSudo)} | sudo -S -p '' -v 2>/dev/null || true")
+            }
+
+            validCommands.forEach { cmd ->
+                scriptLines.add(transformCommandForSudo(cmd, effectiveSudo, requirePassword = false))
+            }
+
+            val fullCommand = scriptLines.joinToString("\n")
 
             ssh.startSession().use { session ->
                 session.allocateDefaultPTY()
                 val cmd: Session.Command = session.exec(fullCommand)
+                try {
+                    cmd.outputStream.close()
+                } catch (_: Exception) {}
 
                 val buffer = ByteArray(4096)
                 while (currentCoroutineContext().isActive) {
@@ -92,6 +117,20 @@ class SshManager @Inject constructor(
                     emit(SshOutput.Data(chunk))
                 }
 
+                // Check for any remaining stderr data
+                withContext(Dispatchers.IO) {
+                    try {
+                        val errAvail = cmd.errorStream.available()
+                        if (errAvail > 0) {
+                            val errBuf = ByteArray(errAvail)
+                            val errRead = cmd.errorStream.read(errBuf)
+                            if (errRead > 0) {
+                                emit(SshOutput.Data(String(errBuf, 0, errRead, Charsets.UTF_8)))
+                            }
+                        }
+                    } catch (_: Exception) {}
+                }
+
                 cmd.join()
                 emit(SshOutput.Complete(cmd.exitStatus ?: 0))
             }
@@ -103,52 +142,6 @@ class SshManager @Inject constructor(
             }
         }
     }.flowOn(Dispatchers.IO)
-
-    /**
-     * Costruisce uno script di shell robusto che:
-     * - Esegue tutti i comandi in sequenza nello stesso processo shell (mantenendo 'cd' e env vars).
-     * - 'set -e' per interrompere lo script al primo errore e restituire l'exit code corretto.
-     * - Se fornita una sudoPassword, la inietta automaticamente validando il timestamp di sudo
-     *   e definendo una funzione sudo wrapper per gestire sia comandi diretti (es. 'sudo apt update')
-     *   sia comandi concatenati o innestati (es. 'cd /dir && sudo restart', 'echo x | sudo tee y').
-     */
-    private fun buildShellScript(commands: List<String>, sudoPassword: String?): String {
-        return buildString {
-            append("set -e\n")
-            if (!sudoPassword.isNullOrBlank()) {
-                val escapedPwd = shellQuote(sudoPassword)
-                append("_SUDO_PWD=$escapedPwd\n")
-                append("if command -v sudo >/dev/null 2>&1; then\n")
-                append("  printf '%s\\n' \"\$_SUDO_PWD\" | command sudo -S -p '' -v 2>/dev/null || true\n")
-                append("  sudo() {\n")
-                append("    if [ -n \"\$_SUDO_PWD\" ]; then\n")
-                append("      if command sudo -n true 2>/dev/null; then\n")
-                append("        command sudo \"\$@\"\n")
-                append("      else\n")
-                append("        printf '%s\\n' \"\$_SUDO_PWD\" | command sudo -S -p '' \"\$@\"\n")
-                append("      fi\n")
-                append("    else\n")
-                append("      command sudo -n \"\$@\"\n")
-                append("    fi\n")
-                append("  }\n")
-                append("fi\n")
-            } else {
-                // Nessuna password sudo configurata: usa -n (non-interactive) per evitare blocchi infiniti su tty
-                append("if command -v sudo >/dev/null 2>&1; then\n")
-                append("  sudo() {\n")
-                append("    command sudo -n \"\$@\"\n")
-                append("  }\n")
-                append("fi\n")
-            }
-            commands.forEach { cmd ->
-                val trimmed = cmd.trim()
-                if (trimmed.isNotBlank() && !trimmed.startsWith("#")) {
-                    append(trimmed)
-                    append("\n")
-                }
-            }
-        }
-    }
 
     /**
      * Controlla se il server è raggiungibile via TCP sulla porta SSH.
