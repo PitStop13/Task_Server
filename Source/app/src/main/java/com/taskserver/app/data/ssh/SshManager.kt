@@ -21,9 +21,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SshManager @Inject constructor(
-    private val settingsManager: SettingsManager
+class SshManager internal constructor(
+    private val isSshEncryptionEnabled: () -> Boolean
 ) {
+
+    @Inject
+    constructor(settingsManager: SettingsManager) : this(
+        isSshEncryptionEnabled = { settingsManager.isSshEncryptionEnabled() }
+    )
 
     init {
         // Registra BouncyCastle in prima posizione per sovrascrivere il provider "BC" limitato di Android.
@@ -34,7 +39,7 @@ class SshManager @Inject constructor(
 
     private fun createSshClient(): SSHClient {
         val config = DefaultConfig()
-        if (settingsManager.isSshEncryptionEnabled()) {
+        if (isSshEncryptionEnabled()) {
             config.keyExchangeFactories = listOf(
                 net.schmizz.sshj.transport.kex.Curve25519SHA256.Factory(),
                 net.schmizz.sshj.transport.kex.Curve25519SHA256.FactoryLibSsh()
@@ -176,7 +181,6 @@ class SshManager @Inject constructor(
         ssh.addHostKeyVerifier(PromiscuousVerifier())
         ssh.connectTimeout = 15000
         ssh.timeout = 0 // Nessun read timeout su socket per sessione interattiva
-        ssh.connection.keepAlive.keepAliveInterval = 15 // Abilita heartbeat SSH prima di connect()
         ssh.connect(host, port)
 
         try {
@@ -187,6 +191,14 @@ class SshManager @Inject constructor(
                 ssh.authPassword(username, password)
             } else {
                 throw IllegalArgumentException("Nessuna credenziale fornita")
+            }
+
+            // Avvia il KeepAlive solo DOPO KEX e autenticazione per rispettare strict KEX (kex-strict)
+            ssh.connection.keepAlive.apply {
+                if (!isAlive) {
+                    keepAliveInterval = 15
+                    start()
+                }
             }
 
             val session = ssh.startSession()
