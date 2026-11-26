@@ -190,7 +190,7 @@ fun SettingsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "TaskServer v1.1.0",
+                    text = "TaskServer v1.2.3",
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontFamily = MonospaceFontFamily,
                         fontWeight = FontWeight.Bold

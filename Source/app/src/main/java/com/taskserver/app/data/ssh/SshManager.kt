@@ -168,35 +168,50 @@ class SshManager @Inject constructor(
         username: String,
         password: String?,
         privateKeyContent: String?,
-        sudoPassword: String? = null
+        sudoPassword: String? = null,
+        initialCols: Int = 80,
+        initialRows: Int = 24
     ): InteractiveSshSession = withContext(Dispatchers.IO) {
         val ssh = createSshClient()
         ssh.addHostKeyVerifier(PromiscuousVerifier())
+        ssh.connectTimeout = 15000
+        ssh.timeout = 0 // Nessun read timeout su socket per sessione interattiva
+        ssh.connection.keepAlive.keepAliveInterval = 15 // Abilita heartbeat SSH prima di connect()
         ssh.connect(host, port)
-        ssh.timeout = 0 // No timeout per sessione interattiva
 
-        if (!privateKeyContent.isNullOrBlank()) {
-            val keyProvider: KeyProvider = ssh.loadKeys(privateKeyContent, null, null)
-            ssh.authPublickey(username, keyProvider)
-        } else if (!password.isNullOrBlank()) {
-            ssh.authPassword(username, password)
-        } else {
-            ssh.disconnect()
-            throw IllegalArgumentException("Nessuna credenziale fornita")
+        try {
+            if (!privateKeyContent.isNullOrBlank()) {
+                val keyProvider: KeyProvider = ssh.loadKeys(privateKeyContent, null, null)
+                ssh.authPublickey(username, keyProvider)
+            } else if (!password.isNullOrBlank()) {
+                ssh.authPassword(username, password)
+            } else {
+                throw IllegalArgumentException("Nessuna credenziale fornita")
+            }
+
+            val session = ssh.startSession()
+            session.allocatePTY(
+                "xterm-256color",
+                initialCols.coerceAtLeast(20),
+                initialRows.coerceAtLeast(10),
+                0,
+                0,
+                emptyMap()
+            )
+            val shell = session.startShell()
+
+            val effectiveSudo = sudoPassword?.takeIf { it.isNotBlank() } ?: password
+
+            return@withContext InteractiveSshSessionImpl(
+                sshClient = ssh,
+                session = session,
+                shell = shell,
+                commandTransformer = { command -> transformCommandForSudo(command, effectiveSudo, requirePassword = false) }
+            )
+        } catch (e: Exception) {
+            try { ssh.disconnect() } catch (_: Exception) {}
+            throw e
         }
-
-        val session = ssh.startSession()
-        session.allocateDefaultPTY()
-        val shell = session.startShell()
-
-        val effectiveSudo = sudoPassword?.takeIf { it.isNotBlank() } ?: password
-
-        return@withContext InteractiveSshSessionImpl(
-            sshClient = ssh,
-            session = session,
-            shell = shell,
-            commandTransformer = { command -> transformCommandForSudo(command, effectiveSudo, requirePassword = false) }
-        )
     }
 }
 

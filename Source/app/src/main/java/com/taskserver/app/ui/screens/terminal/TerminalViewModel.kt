@@ -10,6 +10,7 @@ import com.taskserver.app.data.ssh.InteractiveSshSession
 import com.taskserver.app.data.ssh.SshManager
 import com.taskserver.app.data.ssh.SshOutput
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -22,6 +23,7 @@ data class TerminalUiState(
     val serverHost: String = "",
     val lines: List<String> = emptyList(),
     val isRunning: Boolean = false,
+    val isConnected: Boolean = false,
     val exitCode: Int? = null,
     val error: String? = null,
     val logId: Long? = null,
@@ -176,19 +178,39 @@ class TerminalViewModel @Inject constructor(
     fun cancelExecution() {
         sshJob?.cancel()
         sshJob = null
-        try { interactiveSession?.close() } catch (e: Exception) {}
+        try { interactiveSession?.close() } catch (_: Exception) {}
         interactiveSession = null
-        _uiState.update { it.copy(isRunning = false) }
+        _uiState.update { it.copy(isRunning = false, isConnected = false) }
     }
 
     private val _rawOutputFlow = MutableSharedFlow<ByteArray>(replay = 50, extraBufferCapacity = 256)
     val rawOutputFlow = _rawOutputFlow.asSharedFlow()
 
+    @Volatile
     private var isTerminalReady = false
 
+    @Volatile
+    private var pendingCols = 80
+
+    @Volatile
+    private var pendingRows = 24
+
+    fun reconnectInteractive(serverId: Long) {
+        cancelExecution()
+        startInteractiveSession(serverId)
+    }
+
     private fun startInteractiveSession(serverId: Long) {
+        sshJob?.cancel()
+        sshJob = null
+        try { interactiveSession?.close() } catch (_: Exception) {}
+        interactiveSession = null
+
         viewModelScope.launch {
-            val server = serverRepository.getServerById(serverId) ?: return@launch
+            val server = serverRepository.getServerById(serverId) ?: run {
+                _uiState.update { it.copy(error = "Server non trovato", isRunning = false, isConnected = false, isInteractive = true) }
+                return@launch
+            }
             val credentials = serverRepository.getCredential(server)
             val effectiveSudoPassword = credentials.sudoPassword?.takeIf { it.isNotBlank() } ?: credentials.sshPassword
 
@@ -200,6 +222,7 @@ class TerminalViewModel @Inject constructor(
                     serverHost = server.host,
                     lines = listOf(),
                     isRunning = true,
+                    isConnected = false,
                     isInteractive = true,
                     exitCode = null,
                     error = null
@@ -207,28 +230,75 @@ class TerminalViewModel @Inject constructor(
             }
 
             try {
-                interactiveSession = sshManager.startInteractiveSession(
+                val session = sshManager.startInteractiveSession(
                     server.host,
                     server.port,
                     server.username,
                     credentials.sshPassword,
                     credentials.privateKey,
-                    sudoPassword = effectiveSudoPassword
+                    sudoPassword = effectiveSudoPassword,
+                    initialCols = pendingCols,
+                    initialRows = pendingRows
                 )
+                interactiveSession = session
+                _uiState.update { it.copy(isConnected = true, isRunning = true, error = null) }
+                session.resize(pendingCols, pendingRows)
 
                 sshJob = launch {
-                    interactiveSession?.outputFlow?.collect { chunk ->
-                        if (isTerminalReady) {
-                             _rawOutputFlow.emit(chunk)
-                        } else {
-                             // Buffer internally while JS is loading so we don't drop the motd
-                             _rawOutputFlow.tryEmit(chunk)
+                    try {
+                        session.outputFlow.collect { chunk ->
+                            if (isTerminalReady) {
+                                _rawOutputFlow.emit(chunk)
+                            } else {
+                                // Buffer internally while JS is loading so we don't drop the motd
+                                _rawOutputFlow.tryEmit(chunk)
+                            }
+                        }
+                        // EOF: il server ha chiuso la shell o la connessione è terminata
+                        if (interactiveSession === session) {
+                            try { session.close() } catch (_: Exception) {}
+                            interactiveSession = null
+                            _uiState.update {
+                                it.copy(
+                                    isRunning = false,
+                                    isConnected = false,
+                                    error = "Sessione SSH terminata dal server"
+                                )
+                            }
+                            emitTerminalNotice("\r\n\u001B[33m[Sessione SSH terminata — premi Riconnetti per continuare]\u001B[0m\r\n")
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        if (interactiveSession === session) {
+                            try { session.close() } catch (_: Exception) {}
+                            interactiveSession = null
+                            val msg = e.localizedMessage ?: "Connessione SSH interrotta"
+                            _uiState.update {
+                                it.copy(
+                                    isRunning = false,
+                                    isConnected = false,
+                                    error = msg
+                                )
+                            }
+                            emitTerminalNotice("\r\n\u001B[31m[Errore SSH: $msg]\u001B[0m\r\n")
                         }
                     }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.localizedMessage, isRunning = false) }
+                val msg = e.localizedMessage ?: "Impossibile connettersi via SSH"
+                _uiState.update { it.copy(error = msg, isRunning = false, isConnected = false) }
+                emitTerminalNotice("\r\n\u001B[31m[Connessione fallita: $msg]\u001B[0m\r\n")
             }
+        }
+    }
+
+    private suspend fun emitTerminalNotice(text: String) {
+        val bytes = text.toByteArray(Charsets.UTF_8)
+        if (isTerminalReady) {
+            _rawOutputFlow.emit(bytes)
+        } else {
+            _rawOutputFlow.tryEmit(bytes)
         }
     }
 
@@ -237,6 +307,10 @@ class TerminalViewModel @Inject constructor(
     }
 
     fun resizeTerminal(cols: Int, rows: Int) {
+        if (cols > 0 && rows > 0) {
+            pendingCols = cols
+            pendingRows = rows
+        }
         viewModelScope.launch {
             interactiveSession?.resize(cols, rows)
         }
@@ -244,23 +318,78 @@ class TerminalViewModel @Inject constructor(
 
     fun sendRawInteractiveBytes(bytes: ByteArray) {
         viewModelScope.launch {
-            try {
-                interactiveSession?.sendBytes(bytes)
-            } catch (e: Exception) {
+            val session = interactiveSession
+            if (session == null || !session.isOpen()) {
+                val msg = if (_uiState.value.isRunning && !_uiState.value.isConnected) {
+                    "Connessione SSH in corso..."
+                } else {
+                    "Sessione SSH disconnessa. Premi Riconnetti."
+                }
                 _uiState.update { state ->
-                    state.copy(error = "Error sending data: ${e.localizedMessage}")
+                    state.copy(
+                        isRunning = state.isRunning && !state.isConnected,
+                        isConnected = false,
+                        error = msg
+                    )
+                }
+                return@launch
+            }
+            try {
+                session.sendBytes(bytes)
+                if (_uiState.value.error != null) {
+                    _uiState.update { it.copy(error = null) }
+                }
+            } catch (e: Exception) {
+                val stillOpen = session.isOpen()
+                if (!stillOpen) {
+                    interactiveSession = null
+                }
+                _uiState.update { state ->
+                    state.copy(
+                        isRunning = stillOpen,
+                        isConnected = stillOpen,
+                        error = "Errore invio dati: ${e.localizedMessage ?: "connessione chiusa"}"
+                    )
                 }
             }
         }
     }
 
-    fun sendInteractiveCommand(command: String) {
+    fun sendInteractiveCommand(command: String, onSent: () -> Unit = {}) {
         viewModelScope.launch {
-            try {
-                interactiveSession?.sendCommand(command)
-            } catch (e: Exception) {
+            val session = interactiveSession
+            if (session == null || !session.isOpen()) {
+                val msg = if (_uiState.value.isRunning && !_uiState.value.isConnected) {
+                    "Connessione SSH in corso..."
+                } else {
+                    "Sessione SSH disconnessa. Premi Riconnetti."
+                }
                 _uiState.update { state ->
-                    state.copy(error = "Error sending command: ${e.localizedMessage}")
+                    state.copy(
+                        isRunning = state.isRunning && !state.isConnected,
+                        isConnected = false,
+                        error = msg
+                    )
+                }
+                return@launch
+            }
+            try {
+                session.sendCommand(command)
+                if (_uiState.value.error != null) {
+                    _uiState.update { it.copy(error = null) }
+                }
+                onSent()
+            } catch (e: Exception) {
+                val stillOpen = session.isOpen()
+                if (!stillOpen) {
+                    interactiveSession = null
+                }
+                _uiState.update { state ->
+                    state.copy(
+                        isRunning = stillOpen,
+                        isConnected = stillOpen,
+                        error = "Errore invio comando: ${e.localizedMessage ?: "connessione chiusa"}"
+                    )
                 }
             }
         }

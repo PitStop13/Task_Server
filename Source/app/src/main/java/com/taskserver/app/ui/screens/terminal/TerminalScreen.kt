@@ -122,6 +122,10 @@ fun TerminalScreen(
         ) {
             // Execution Status Bar
             val (statusText, statusColor) = when {
+                uiState.isInteractive && uiState.error != null -> Pair(uiState.error!!, TerminalRed)
+                uiState.isInteractive && uiState.isConnected -> Pair("Sessione SSH attiva", TerminalGreen)
+                uiState.isInteractive && uiState.isRunning -> Pair("Connessione SSH in corso...", TerminalAmber)
+                uiState.isInteractive -> Pair("Sessione SSH disconnessa", TerminalRed)
                 uiState.isRunning -> Pair(stringResource(R.string.terminal_running), TerminalAmber)
                 uiState.exitCode == 0 -> Pair(stringResource(R.string.terminal_success), TerminalGreen)
                 uiState.exitCode != null -> Pair(stringResource(R.string.terminal_error, uiState.exitCode!!), TerminalRed)
@@ -142,7 +146,7 @@ fun TerminalScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    GlowDot(color = statusColor, size = 8.dp, animate = uiState.isRunning)
+                    GlowDot(color = statusColor, size = 8.dp, animate = uiState.isRunning || uiState.isConnected)
                     Spacer(Modifier.width(12.dp))
                     Text(
                         text = statusText,
@@ -151,8 +155,29 @@ fun TerminalScreen(
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
                         ),
-                        color = statusColor
+                        color = statusColor,
+                        modifier = Modifier.weight(1f)
                     )
+                    if (uiState.isInteractive && !uiState.isConnected && !uiState.isRunning) {
+                        Spacer(Modifier.width(8.dp))
+                        TextButton(
+                            onClick = { viewModel.reconnectInteractive(serverId) },
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Replay,
+                                contentDescription = null,
+                                tint = CyanPrimary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = "Riconnetti",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = CyanPrimary
+                            )
+                        }
+                    }
                 }
             }
 
@@ -251,9 +276,11 @@ fun TerminalScreen(
                         ),
                         keyboardActions = androidx.compose.foundation.text.KeyboardActions(
                             onSend = {
-                                if (commandInput.isNotBlank()) {
-                                    viewModel.sendInteractiveCommand(commandInput.trim())
-                                    commandInput = ""
+                                val cmd = commandInput.trim()
+                                if (cmd.isNotEmpty()) {
+                                    viewModel.sendInteractiveCommand(cmd) {
+                                        commandInput = ""
+                                    }
                                 }
                             }
                         ),
@@ -281,15 +308,17 @@ fun TerminalScreen(
                     // Send Button
                     IconButton(
                         onClick = {
-                            if (commandInput.isNotBlank()) {
-                                viewModel.sendInteractiveCommand(commandInput.trim())
-                                commandInput = ""
+                            val cmd = commandInput.trim()
+                            if (cmd.isNotEmpty()) {
+                                viewModel.sendInteractiveCommand(cmd) {
+                                    commandInput = ""
+                                }
                             }
                         },
                         modifier = Modifier
                             .size(46.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(CyanPrimary)
+                            .background(if (uiState.isConnected) CyanPrimary else CyanPrimary.copy(alpha = 0.5f))
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.Send,
